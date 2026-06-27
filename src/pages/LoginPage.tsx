@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { GraduationCap, LogIn, User, Lock, ArrowRight, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -6,19 +6,34 @@ import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { authApi } from '@/services/api';
 import { useApp } from '@/contexts/AppContext';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { dispatch } = useApp();
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [isRegister, setIsRegister] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'teacher' | 'student' | 'headteacher'>('student');
   const [isLoading, setIsLoading] = useState(false);
+  const [checkingSetup, setCheckingSetup] = useState(true);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  useEffect(() => {
+    const checkSetup = async () => {
+      try {
+        const status = await authApi.getSetupStatus();
+        setNeedsSetup(status.needsHeadteacherSetup);
+        setIsRegister(status.needsHeadteacherSetup);
+      } catch {
+        toast.error('Unable to reach the Classbridge server');
+      } finally {
+        setCheckingSetup(false);
+      }
+    };
+    checkSetup();
+  }, []);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email.trim()) {
       toast.error('Please enter your email');
@@ -27,14 +42,14 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      const user = isRegister
-        ? await authApi.register({ name: name.trim(), email: email.trim(), password, role })
+      const result = isRegister
+        ? await authApi.register({ name: name.trim(), email: email.trim(), password })
         : await authApi.login(email.trim(), password);
 
-      if (user) {
-        dispatch({ type: 'LOGIN', payload: user });
-        toast.success(isRegister ? `Account created for ${user.name}` : `Welcome, ${user.name}!`);
-        switch (user.role) {
+      if (result?.user) {
+        dispatch({ type: 'LOGIN', payload: result.user });
+        toast.success(isRegister ? `Headteacher account created for ${result.user.name}` : `Welcome, ${result.user.name}!`);
+        switch (result.user.role) {
           case 'teacher':
             navigate('/teacher');
             break;
@@ -47,11 +62,22 @@ export default function LoginPage() {
         }
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Authentication failed');
+      const message = error instanceof Error ? error.message : 'Authentication failed';
+      toast.error(message.includes('Failed to fetch')
+        ? 'Unable to reach the Classbridge server. Make sure the backend is running on port 4000.'
+        : message);
     } finally {
       setIsLoading(false);
     }
   };
+
+  if (checkingSetup) {
+    return (
+      <div className="w-full max-w-md text-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="w-full max-w-md">
@@ -60,13 +86,17 @@ export default function LoginPage() {
           <div className="inline-flex p-3 bg-emerald-50 rounded-xl mb-3">
             <GraduationCap className="h-8 w-8 text-emerald-700" />
           </div>
-          <h1 className="text-2xl font-bold">{isRegister ? 'Create your account' : 'Welcome Back'}</h1>
+          <h1 className="text-2xl font-bold">
+            {isRegister ? 'Set Up Your School' : 'Welcome Back'}
+          </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            {isRegister ? 'Sign up to start using Classbridge' : 'Log in to access your dashboard'}
+            {isRegister
+              ? 'Create the headteacher account to manage your school'
+              : 'Log in with the account created by your headteacher'}
           </p>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4">
           {isRegister && (
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
@@ -104,24 +134,9 @@ export default function LoginPage() {
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="password123"
+              placeholder="Enter your password"
               className="h-11"
             />
-            {isRegister && (
-              <div className="space-y-2 mt-2">
-                <label className="text-sm font-medium">Role</label>
-                <Select value={role} onValueChange={(value) => setRole(value as 'teacher' | 'student' | 'headteacher')}>
-                  <SelectTrigger className="h-11">
-                    <SelectValue placeholder="Select role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="teacher">Teacher</SelectItem>
-                    <SelectItem value="student">Student</SelectItem>
-                    <SelectItem value="headteacher">Headteacher</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
           </div>
           <Button
             type="submit"
@@ -130,20 +145,19 @@ export default function LoginPage() {
           >
             {isLoading ? (isRegister ? 'Creating account...' : 'Logging in...') : (
               <>
-                {isRegister ? 'Create Account' : 'Log In'} {isRegister ? <UserPlus className="ml-2 h-4 w-4" /> : <LogIn className="ml-2 h-4 w-4" />}
+                {isRegister ? 'Create Headteacher Account' : 'Log In'} {isRegister ? <UserPlus className="ml-2 h-4 w-4" /> : <LogIn className="ml-2 h-4 w-4" />}
               </>
             )}
           </Button>
         </form>
 
-        <div className="mt-6 pt-6 border-t text-center">
-          <button
-            onClick={() => setIsRegister((value) => !value)}
-            className="text-sm text-emerald-700 hover:text-emerald-800 font-medium"
-          >
-            {isRegister ? 'Already have an account? Log in' : 'Need an account? Sign up'}
-          </button>
-        </div>
+        {!needsSetup && (
+          <div className="mt-6 pt-6 border-t text-center">
+            <p className="text-sm text-muted-foreground">
+              Teachers and students cannot self-register. Contact your headteacher for an account.
+            </p>
+          </div>
+        )}
 
         <div className="mt-6 text-center">
           <button

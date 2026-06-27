@@ -39,6 +39,7 @@ export default function SubmissionsPage() {
   };
 
   const pendingSubs = submissions.filter((s) => s.status === 'submitted');
+  const returnedSubs = submissions.filter((s) => s.status === 'returned');
   const gradedSubs = submissions.filter((s) => s.status === 'graded');
 
   return (
@@ -89,6 +90,29 @@ export default function SubmissionsPage() {
           </div>
         )}
       </div>
+
+      {/* Returned */}
+      {returnedSubs.length > 0 && (
+        <div className="bg-white rounded-xl border p-4 sm:p-5">
+          <h2 className="font-semibold flex items-center gap-2 mb-4">
+            Awaiting Student Redo ({returnedSubs.length})
+          </h2>
+          <div className="space-y-3">
+            {returnedSubs.map((sub) => (
+              <div key={sub.id} className="p-4 rounded-lg border bg-amber-50/40">
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">{sub.studentName}</span>
+                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Returned</span>
+                </div>
+                <p className="text-sm text-muted-foreground mt-1">{sub.assignmentTitle}</p>
+                {sub.feedback && (
+                  <p className="text-xs text-amber-800 mt-2 italic">&quot;{sub.feedback}&quot;</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Graded */}
       <div className="bg-white rounded-xl border p-4 sm:p-5">

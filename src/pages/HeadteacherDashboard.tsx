@@ -41,8 +41,8 @@ export default function HeadteacherDashboard() {
         <StatCard title="Approved" value={stats.approvedLessons} icon={CheckCircle} color="green" onClick={() => navigate('/headteacher/review')} />
         <StatCard title="Corrections" value={stats.correctionsRequested} icon={XCircle} color="rose" onClick={() => navigate('/headteacher/review')} />
         <StatCard title="Total Classes" value={stats.totalClasses} icon={BookOpen} color="blue" onClick={() => navigate('/headteacher/classes')} />
-        <StatCard title="Teachers" value={stats.totalTeachers} icon={Users} color="purple" onClick={() => navigate('/headteacher/teachers')} />
-        <StatCard title="Students" value={stats.totalStudents} icon={Users} color="sky" onClick={() => navigate('/headteacher/classes')} />
+        <StatCard title="Teachers" value={stats.totalTeachers} icon={Users} color="purple" onClick={() => navigate('/headteacher/users')} />
+        <StatCard title="Students" value={stats.totalStudents} icon={Users} color="sky" onClick={() => navigate('/headteacher/users')} />
       </div>
 
       {/* Pending Reviews - Priority */}

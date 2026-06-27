@@ -1,12 +1,38 @@
 import type {
   User, Class, LessonNote, Assignment, Submission, Question, Activity, Reply,
+  Notification, TeacherSummary, AuthResponse, SetupStatus, CreateUserPayload, CreateClassPayload,
 } from '@/types';
 
 const API_BASE = '/api';
 
+let authToken: string | null = null;
+
+export function setAuthToken(token: string | null) {
+  authToken = token;
+  if (typeof window !== 'undefined') {
+    if (token) {
+      localStorage.setItem('cb_token', token);
+    } else {
+      localStorage.removeItem('cb_token');
+    }
+  }
+}
+
+export function getAuthToken(): string | null {
+  if (!authToken && typeof window !== 'undefined') {
+    authToken = localStorage.getItem('cb_token');
+  }
+  return authToken;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const headers = new Headers(init?.headers);
   const isFormData = init?.body instanceof FormData;
+  const token = getAuthToken();
+
+  if (token) {
+    headers.set('Authorization', `Bearer ${token}`);
+  }
 
   if (!isFormData && !headers.has('Content-Type')) {
     headers.set('Content-Type', 'application/json');
@@ -18,7 +44,14 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    const errorText = await response.text().catch(() => '');
+    let message = `Request failed: ${response.status}`;
+    try {
+      message = errorText ? JSON.parse(errorText).error || errorText : message;
+    } catch {
+      message = errorText || message;
+    }
+    throw new Error(message);
   }
 
   return response.json() as Promise<T>;
@@ -26,26 +59,73 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 // Auth API
 export const authApi = {
-  login: async (email: string, password: string): Promise<User | null> => {
-    const user = await request<User>('/auth/login', {
+  getSetupStatus: async (): Promise<SetupStatus> => request<SetupStatus>('/auth/setup-status'),
+
+  login: async (email: string, password: string): Promise<AuthResponse | null> => {
+    const result = await request<AuthResponse>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     });
-    return user || null;
+    if (result?.token) {
+      setAuthToken(result.token);
+    }
+    return result || null;
   },
 
-  register: async (data: { name: string; email: string; password: string; role: User['role'] }): Promise<User | null> => {
-    const user = await request<User>('/auth/register', {
+  register: async (data: { name: string; email: string; password: string }): Promise<AuthResponse | null> => {
+    const result = await request<AuthResponse>('/auth/register', {
       method: 'POST',
+      body: JSON.stringify({ ...data, role: 'headteacher' }),
+    });
+    if (result?.token) {
+      setAuthToken(result.token);
+    }
+    return result || null;
+  },
+
+  getMe: async (): Promise<User | null> => {
+    try {
+      return await request<User>('/auth/me');
+    } catch {
+      return null;
+    }
+  },
+
+  logout: () => {
+    setAuthToken(null);
+  },
+};
+
+// Users API
+export const usersApi = {
+  updateProfile: async (userId: string, data: { name: string; email: string }): Promise<User> => {
+    return request<User>(`/users/${userId}`, {
+      method: 'PATCH',
       body: JSON.stringify(data),
     });
-    return user || null;
   },
 
-  getMe: async (userId: string): Promise<User | null> => {
-    const users = await request<User[]>('/users');
-    return users.find((u) => u.id === userId) || null;
-  },
+  getTeachers: async (): Promise<TeacherSummary[]> => request<TeacherSummary[]>('/users/teachers'),
+
+  getStudents: async (): Promise<User[]> => request<User[]>('/users/students'),
+
+  createUser: async (data: CreateUserPayload): Promise<User> => request<User>('/users', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
+};
+
+// Notifications API
+export const notificationsApi = {
+  getAll: async (): Promise<Notification[]> => request<Notification[]>('/notifications'),
+
+  markRead: async (id: string): Promise<Notification> => request<Notification>(`/notifications/${id}/read`, {
+    method: 'PATCH',
+  }),
+
+  markAllRead: async (): Promise<{ success: boolean }> => request<{ success: boolean }>('/notifications/read-all', {
+    method: 'PATCH',
+  }),
 };
 
 // Classes API
@@ -70,15 +150,22 @@ export const classesApi = {
     return response.find((c) => c.id === id) || null;
   },
 
-  create: async (data: Omit<Class, 'id' | 'code' | 'students' | 'createdAt'>): Promise<Class> => {
+  create: async (data: CreateClassPayload): Promise<Class> => {
     return request<Class>('/classes', {
       method: 'POST',
       body: JSON.stringify(data),
     });
   },
 
-  join: async (code: string, studentId: string): Promise<Class | null> => {
-    return request<Class | null>(`/classes/join?code=${encodeURIComponent(code)}&studentId=${encodeURIComponent(studentId)}`, {
+  update: async (id: string, data: { teacherId?: string; studentIds?: string[] }): Promise<Class> => {
+    return request<Class>(`/classes/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    });
+  },
+
+  join: async (code: string): Promise<Class | null> => {
+    return request<Class | null>(`/classes/join?code=${encodeURIComponent(code)}`, {
       method: 'POST',
     });
   },
@@ -237,6 +324,11 @@ export const submissionsApi = {
     method: 'PATCH',
     body: JSON.stringify({ score, feedback }),
   }),
+
+  returnForRevision: async (id: string, feedback: string): Promise<Submission | null> => request<Submission>(`/submissions/${id}/return`, {
+    method: 'POST',
+    body: JSON.stringify({ feedback }),
+  }),
 };
 
 // Questions API
@@ -297,3 +389,7 @@ export const statsApi = {
     feedbackReceived: number;
   }>(`/stats/student/${studentId}`),
 };
+
+export function getUploadUrl(storedName: string): string {
+  return `${API_BASE}/uploads/${storedName}`;
+}

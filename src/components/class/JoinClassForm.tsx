@@ -24,7 +24,7 @@ export default function JoinClassForm({ onSuccess }: JoinClassFormProps) {
 
     setIsSubmitting(true);
     try {
-      const result = await classesApi.join(code.trim().toUpperCase(), state.currentUser!.id);
+      const result = await classesApi.join(code.trim().toUpperCase());
       if (result) {
         dispatch({ type: 'ADD_CLASS', payload: result });
         await activitiesApi.add({
@@ -55,7 +55,7 @@ export default function JoinClassForm({ onSuccess }: JoinClassFormProps) {
           Enter Class Code
         </label>
         <Input
-          placeholder="e.g., JHS2-SCI-4821"
+          placeholder="e.g., CLASS-4821"
           value={code}
           onChange={(e) => setCode(e.target.value.toUpperCase())}
           className="h-12 text-center text-lg tracking-wider font-mono uppercase"

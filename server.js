@@ -2,183 +2,62 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createDatabase } from './server/database.js';
+import {
+  hashPassword,
+  verifyPassword,
+  createToken,
+  sanitizeUser,
+  requireAuth,
+  requireRole,
+} from './server/auth.js';
+import { saveUploadedFile, getUploadPath } from './server/storage.js';
+import {
+  notifyUsers,
+  notifyHeadteachers,
+  notifyClassStudents,
+} from './server/notifications.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const users = [
-  { id: 'u1', name: 'Mr. Kwame Asante', email: 'teacher@classbridge.test', role: 'teacher', avatar: '', password: 'password123' },
-  { id: 'u2', name: 'Ama Serwaa', email: 'student@classbridge.test', role: 'student', avatar: '', password: 'password123' },
-  { id: 'u3', name: 'Mrs. Abena Owusu', email: 'headteacher@classbridge.test', role: 'headteacher', avatar: '', password: 'password123' },
-];
+function splitBuffer(buffer, separator) {
+  const sep = Buffer.isBuffer(separator) ? separator : Buffer.from(separator);
+  const parts = [];
+  let start = 0;
+  let index = buffer.indexOf(sep, start);
 
-const classes = [
-  {
-    id: 'c1',
-    name: 'JHS 2 Integrated Science',
-    subject: 'Integrated Science',
-    level: 'JHS 2',
-    term: 'Second Term',
-    code: 'JHS2-SCI-4821',
-    teacherId: 'u1',
-    teacherName: 'Mr. Kwame Asante',
-    students: ['u2'],
-    createdAt: '2026-06-20T10:00:00Z',
-  },
-  {
-    id: 'c2',
-    name: 'JHS 1 Mathematics',
-    subject: 'Mathematics',
-    level: 'JHS 1',
-    term: 'Second Term',
-    code: 'JHS1-MATH-7392',
-    teacherId: 'u1',
-    teacherName: 'Mr. Kwame Asante',
-    students: ['u2'],
-    createdAt: '2026-06-22T14:30:00Z',
-  },
-];
+  while (index !== -1) {
+    parts.push(buffer.slice(start, index));
+    start = index + sep.length;
+    index = buffer.indexOf(sep, start);
+  }
 
-const lessons = [
-  {
-    id: 'l1',
-    classId: 'c1',
-    className: 'JHS 2 Integrated Science',
-    teacherId: 'u1',
-    teacherName: 'Mr. Kwame Asante',
-    subject: 'Integrated Science',
-    week: 4,
-    date: '2026-06-25',
-    topic: 'Photosynthesis',
-    subTopic: 'The process by which plants make their own food',
-    duration: 60,
-    learningObjectives: 'Students will understand how plants produce food using sunlight, water, and carbon dioxide.',
-    previousKnowledge: 'Students know that plants need sunlight and water to grow.',
-    teachingMaterials: 'Textbook, chart showing photosynthesis process, potted plant, iodine solution.',
-    introduction: 'Show students a potted plant and ask: "How do you think this plant gets its food?" Discuss responses for 5 minutes.',
-    teacherActivities: 'Explain the photosynthesis equation. Demonstrate the starch test using iodine solution on a leaf. Guide students through the process step by step.',
-    learnerActivities: 'Draw and label the photosynthesis process. Work in groups to discuss what happens when a plant is kept in the dark for 3 days. Present findings to class.',
-    assessment: 'Draw a well-labeled diagram of photosynthesis. Write the word equation for photosynthesis. Explain why plants are called producers.',
-    closure: 'Summarize key points. Assign homework: observe a plant at home and note changes when placed in different light conditions.',
-    remarks: 'Students showed great interest in the starch test demonstration.',
-    timeAllocations: [
-      { id: 'ta1', activity: 'Introduction', minutes: 5 },
-      { id: 'ta2', activity: 'Teacher Presentation', minutes: 20 },
-      { id: 'ta3', activity: 'Group Activity', minutes: 20 },
-      { id: 'ta4', activity: 'Assessment', minutes: 10 },
-      { id: 'ta5', activity: 'Closure', minutes: 5 },
-    ],
-    status: 'approved',
-    headteacherComment: 'Well-structured lesson with clear activities. Approved for teaching.',
-    createdAt: '2026-06-23T08:00:00Z',
-    updatedAt: '2026-06-24T10:30:00Z',
-  },
-  {
-    id: 'l2',
-    classId: 'c1',
-    className: 'JHS 2 Integrated Science',
-    teacherId: 'u1',
-    teacherName: 'Mr. Kwame Asante',
-    subject: 'Integrated Science',
-    week: 5,
-    date: '2026-06-27',
-    topic: 'Respiration in Plants',
-    subTopic: 'How plants breathe and release energy',
-    duration: 60,
-    learningObjectives: 'Students will describe the process of respiration in plants and differentiate it from photosynthesis.',
-    previousKnowledge: 'Students understand photosynthesis and that plants need energy.',
-    teachingMaterials: 'Textbook, germinating seeds in a flask, lime water, charts.',
-    introduction: 'Review photosynthesis from previous lesson. Ask: "Do plants also need to release energy? How?"',
-    teacherActivities: 'Explain aerobic respiration. Show experiment with germinating seeds and lime water. Compare photosynthesis and respiration using a chart.',
-    learnerActivities: 'Observe the lime water experiment and record observations. Complete a comparison table of photosynthesis vs respiration.',
-    assessment: 'Define respiration. Write the word equation for aerobic respiration. State two differences between photosynthesis and respiration.',
-    closure: 'Recap the importance of respiration for plant survival. Preview next lesson on fermentation.',
-    remarks: '',
-    timeAllocations: [
-      { id: 'ta6', activity: 'Introduction', minutes: 5 },
-      { id: 'ta7', activity: 'Teacher Presentation', minutes: 25 },
-      { id: 'ta8', activity: 'Experiment Observation', minutes: 15 },
-      { id: 'ta9', activity: 'Assessment', minutes: 10 },
-      { id: 'ta10', activity: 'Closure', minutes: 5 },
-    ],
-    status: 'submitted',
-    createdAt: '2026-06-26T09:00:00Z',
-    updatedAt: '2026-06-26T09:00:00Z',
-  },
-];
-
-const assignments = [
-  {
-    id: 'a1',
-    classId: 'c1',
-    className: 'JHS 2 Integrated Science',
-    teacherId: 'u1',
-    teacherName: 'Mr. Kwame Asante',
-    title: 'Photosynthesis Diagram',
-    description: 'Draw a well-labeled diagram showing the process of photosynthesis.',
-    totalMarks: 20,
-    dueDate: '2026-06-30',
-    createdAt: '2026-06-25T10:00:00Z',
-  },
-];
-
-const submissions = [
-  {
-    id: 's1',
-    assignmentId: 'a1',
-    assignmentTitle: 'Photosynthesis Diagram',
-    studentId: 'u2',
-    studentName: 'Ama Serwaa',
-    classId: 'c1',
-    answer: 'I have drawn a diagram showing the process of photosynthesis.',
-    score: 18,
-    feedback: 'Excellent work.',
-    status: 'graded',
-    submittedAt: '2026-06-26T15:30:00Z',
-  },
-];
-
-const questions = [
-  {
-    id: 'q1',
-    lessonId: 'l1',
-    lessonTopic: 'Photosynthesis',
-    studentId: 'u2',
-    studentName: 'Ama Serwaa',
-    question: 'Sir, I am confused about when photosynthesis happens.',
-    replies: [],
-    createdAt: '2026-06-26T12:00:00Z',
-  },
-];
-
-const activities = [
-  {
-    id: 'act1',
-    userId: 'u1',
-    userName: 'Mr. Kwame Asante',
-    userRole: 'teacher',
-    action: 'created',
-    target: 'class',
-    timestamp: '2026-06-26T08:00:00Z',
-  },
-];
+  parts.push(buffer.slice(start));
+  return parts;
+}
 
 function parseMultipartBody(rawBody, boundary) {
   const parsed = {};
-  const parts = rawBody.split(`--${boundary}`).slice(1, -1);
+  const parts = splitBuffer(rawBody, `--${boundary}`).slice(1, -1);
 
   for (const part of parts) {
-    const separatorIndex = part.indexOf('\r\n\r\n');
-    if (separatorIndex === -1) continue;
+    const separator = part.indexOf('\r\n\r\n');
+    if (separator === -1) continue;
 
-    const headersBlock = part.slice(0, separatorIndex).trim();
-    const bodyBlock = part.slice(separatorIndex + 4).replace(/\r\n$/, '');
+    const headersBlock = part.subarray(0, separator).toString('utf8').trim();
+    const bodyBlock = Buffer.from(part.subarray(separator + 4));
+    const trimmedBody = bodyBlock.length >= 2
+      && bodyBlock[bodyBlock.length - 2] === 13
+      && bodyBlock[bodyBlock.length - 1] === 10
+      ? bodyBlock.subarray(0, bodyBlock.length - 2)
+      : bodyBlock;
     const headers = {};
 
     headersBlock.split('\r\n').forEach((headerLine) => {
-      const separator = headerLine.indexOf(':');
-      if (separator === -1) return;
-      const key = headerLine.slice(0, separator).trim().toLowerCase();
-      const value = headerLine.slice(separator + 1).trim();
+      const separatorIndex = headerLine.indexOf(':');
+      if (separatorIndex === -1) return;
+      const key = headerLine.slice(0, separatorIndex).trim().toLowerCase();
+      const value = headerLine.slice(separatorIndex + 1).trim();
       headers[key] = value;
     });
 
@@ -192,17 +71,17 @@ function parseMultipartBody(rawBody, boundary) {
     const hasFile = Boolean(filenameMatch && filenameMatch[1]);
 
     if (hasFile) {
-      const attachment = {
-        name: filenameMatch[1],
-        type: headers['content-type'] || 'application/octet-stream',
-        size: Buffer.byteLength(bodyBlock, 'utf8'),
-      };
+      const attachment = saveUploadedFile(
+        trimmedBody,
+        filenameMatch[1],
+        headers['content-type'] || 'application/octet-stream',
+      );
       const currentAttachments = Array.isArray(parsed.attachments) ? parsed.attachments : [];
       parsed.attachments = [...currentAttachments, attachment];
       continue;
     }
 
-    parsed[fieldName] = bodyBlock;
+    parsed[fieldName] = trimmedBody.toString('utf8');
   }
 
   return parsed;
@@ -221,19 +100,30 @@ function parseMultipart(req, res, next) {
     return res.status(400).json({ error: 'Missing multipart boundary' });
   }
 
-  let rawBody = '';
-  req.setEncoding('utf8');
+  const chunks = [];
   req.on('data', (chunk) => {
-    rawBody += chunk;
+    chunks.push(chunk);
   });
   req.on('end', () => {
-    req.body = parseMultipartBody(rawBody, boundary);
+    req.body = parseMultipartBody(Buffer.concat(chunks), boundary);
     next();
   });
 }
 
-export function createApp() {
+function mapAttachments(items = []) {
+  return items.map((item) => ({
+    id: item.id || item.storedName,
+    name: item.name || 'attachment',
+    type: item.type || 'application/octet-stream',
+    size: item.size || 0,
+    storedName: item.storedName || item.id,
+  }));
+}
+
+export function createApp(options = {}) {
+  const db = createDatabase(options.dbPath);
   const app = express();
+  const auth = requireAuth(db);
 
   app.use(cors());
   app.use(express.json());
@@ -244,8 +134,8 @@ export function createApp() {
     res.json({ status: 'ok', service: 'classbridge-api' });
   });
 
-  app.get('/api/users', (_req, res) => {
-    res.json(users);
+  app.get('/api/auth/setup-status', (_req, res) => {
+    res.json({ needsHeadteacherSetup: !db.hasHeadteacher() });
   });
 
   app.post('/api/auth/register', (req, res) => {
@@ -253,23 +143,30 @@ export function createApp() {
     if (!name || !email || !password || !role) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
+    if (role !== 'headteacher') {
+      return res.status(403).json({ error: 'Only the headteacher can register directly. Teachers and students are created by the headteacher.' });
+    }
+    if (db.hasHeadteacher()) {
+      return res.status(403).json({ error: 'A headteacher account already exists. Please log in.' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
 
-    const existingUser = users.find((entry) => entry.email.toLowerCase() === email.toLowerCase());
-    if (existingUser) {
+    if (db.findUserByEmail(email)) {
       return res.status(409).json({ error: 'User already exists' });
     }
 
-    const newUser = {
-      id: `u${Date.now()}`,
-      name,
-      email,
-      role,
-      avatar: '',
-      password,
-    };
-    users.push(newUser);
-    const { password: _password, ...safeUser } = newUser;
-    return res.status(201).json(safeUser);
+    const user = db.createUser({
+      name: String(name).trim(),
+      email: String(email).trim().toLowerCase(),
+      role: 'headteacher',
+      passwordHash: hashPassword(password),
+    });
+
+    const safeUser = sanitizeUser(user);
+    const token = createToken(user.id);
+    return res.status(201).json({ user: safeUser, token });
   });
 
   app.post('/api/auth/login', (req, res) => {
@@ -278,251 +175,479 @@ export function createApp() {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const user = users.find((entry) => entry.email.toLowerCase() === email.toLowerCase() && entry.password === password);
-    if (!user) {
+    const user = db.findUserByEmail(email);
+    if (!user || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
-    const { password: _password, ...safeUser } = user;
-    return res.json(safeUser);
+    const safeUser = sanitizeUser(user);
+    const token = createToken(user.id);
+    return res.json({ user: safeUser, token });
   });
 
-  app.get('/api/classes', (_req, res) => {
-    res.json(classes);
+  app.get('/api/auth/me', auth, (req, res) => {
+    res.json(req.user);
   });
 
-  app.post('/api/classes', (req, res) => {
-    const newClass = {
-      id: `c${Date.now()}`,
-      code: `CLASS-${Math.floor(1000 + Math.random() * 9000)}`,
-      students: [],
-      createdAt: new Date().toISOString(),
-      ...req.body,
-    };
-    classes.push(newClass);
-    res.status(201).json(newClass);
+  app.patch('/api/users/:id', auth, (req, res) => {
+    if (req.user.id !== req.params.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const { name, email } = req.body || {};
+    if (!name?.trim() || !email?.trim()) {
+      return res.status(400).json({ error: 'Name and email are required' });
+    }
+
+    const existing = db.findUserByEmail(email);
+    if (existing && existing.id !== req.params.id) {
+      return res.status(409).json({ error: 'Email already in use' });
+    }
+
+    const updated = db.updateUser(req.params.id, {
+      name: name.trim(),
+      email: email.trim().toLowerCase(),
+    });
+    return res.json(sanitizeUser(updated));
   });
 
-  app.post('/api/classes/join', (req, res) => {
-    const { code, studentId } = req.query;
-    const targetClass = classes.find((entry) => entry.code === code);
+  app.get('/api/users/teachers', auth, requireRole('headteacher'), (_req, res) => {
+    const teachers = db.getTeachers().map(sanitizeUser);
+    const lessons = db.getLessons();
+    const result = teachers.map((teacher) => {
+      const teacherLessons = lessons.filter((lesson) => lesson.teacherId === teacher.id);
+      return {
+        ...teacher,
+        lessonCount: teacherLessons.length,
+        approvedLessonCount: teacherLessons.filter((lesson) => lesson.status === 'approved').length,
+      };
+    });
+    res.json(result);
+  });
+
+  app.get('/api/users/students', auth, requireRole('headteacher'), (_req, res) => {
+    res.json(db.getStudents().map(sanitizeUser));
+  });
+
+  app.post('/api/users', auth, requireRole('headteacher'), (req, res) => {
+    const { name, email, password, role } = req.body || {};
+    if (!name || !email || !password || !role) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    if (!['teacher', 'student'].includes(role)) {
+      return res.status(400).json({ error: 'Can only create teacher or student accounts' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+    if (db.findUserByEmail(email)) {
+      return res.status(409).json({ error: 'User already exists' });
+    }
+
+    const user = db.createUser({
+      name: String(name).trim(),
+      email: String(email).trim().toLowerCase(),
+      role,
+      passwordHash: hashPassword(password),
+    });
+
+    notifyUsers(db, [user.id], {
+      title: 'Your ClassBridge account is ready',
+      detail: `Your ${role} account was created by the headteacher. You can now log in.`,
+    });
+
+    return res.status(201).json(sanitizeUser(user));
+  });
+
+  app.get('/api/notifications', auth, (req, res) => {
+    res.json(db.getNotifications(req.user.id));
+  });
+
+  app.patch('/api/notifications/:id/read', auth, (req, res) => {
+    const notification = db.markNotificationRead(req.params.id, req.user.id);
+    if (!notification) {
+      return res.status(404).json({ error: 'Notification not found' });
+    }
+    return res.json(notification);
+  });
+
+  app.patch('/api/notifications/read-all', auth, (req, res) => {
+    db.markAllNotificationsRead(req.user.id);
+    res.json({ success: true });
+  });
+
+  app.get('/api/uploads/:storedName', auth, (req, res) => {
+    const filePath = getUploadPath(req.params.storedName);
+    if (!filePath) {
+      return res.status(404).json({ error: 'File not found' });
+    }
+    return res.sendFile(filePath);
+  });
+
+  app.get('/api/classes', auth, (_req, res) => {
+    res.json(db.getClasses());
+  });
+
+  app.post('/api/classes', auth, requireRole('headteacher'), (req, res) => {
+    const { name, subject, level, term, teacherId, studentIds = [] } = req.body || {};
+    if (!name || !subject || !level || !term || !teacherId) {
+      return res.status(400).json({ error: 'Missing required class fields' });
+    }
+
+    const teacher = db.findUserById(teacherId);
+    if (!teacher || teacher.role !== 'teacher') {
+      return res.status(400).json({ error: 'Invalid teacher selected' });
+    }
+
+    const validStudentIds = studentIds.filter((id) => {
+      const student = db.findUserById(id);
+      return student && student.role === 'student';
+    });
+
+    const newClass = db.createClass({
+      name: String(name).trim(),
+      subject,
+      level,
+      term,
+      teacherId: teacher.id,
+      teacherName: teacher.name,
+      students: validStudentIds,
+    });
+
+    notifyUsers(db, [teacher.id], {
+      title: 'New class assigned to you',
+      detail: `You have been assigned to teach ${newClass.name}.`,
+    });
+
+    notifyUsers(db, validStudentIds, {
+      title: 'You have been added to a class',
+      detail: `You have been enrolled in ${newClass.name} with ${teacher.name}.`,
+    });
+
+    db.addActivity({
+      userId: req.user.id,
+      userName: req.user.name,
+      userRole: req.user.role,
+      action: 'assigned',
+      target: `class ${newClass.name}`,
+    });
+
+    return res.status(201).json(newClass);
+  });
+
+  app.patch('/api/classes/:id', auth, requireRole('headteacher'), (req, res) => {
+    const targetClass = db.getClasses().find((entry) => entry.id === req.params.id);
     if (!targetClass) {
       return res.status(404).json({ error: 'Class not found' });
     }
-    if (targetClass.students.includes(studentId)) {
-      return res.status(200).json(targetClass);
-    }
-    targetClass.students.push(studentId);
-    return res.status(200).json(targetClass);
-  });
 
-  app.get('/api/lessons', (_req, res) => {
-    res.json(lessons);
-  });
+    const { teacherId, studentIds } = req.body || {};
+    const updates = {};
 
-  app.post('/api/lessons', (req, res) => {
-    const newLesson = {
-      id: `l${Date.now()}`,
-      status: 'draft',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      ...req.body,
-    };
-    lessons.push(newLesson);
-    res.status(201).json(newLesson);
-  });
-
-  app.patch('/api/lessons/:id', (req, res) => {
-    const lesson = lessons.find((entry) => entry.id === req.params.id);
-    if (!lesson) {
-      return res.status(404).json({ error: 'Lesson not found' });
-    }
-    Object.assign(lesson, req.body, { updatedAt: new Date().toISOString() });
-    return res.json(lesson);
-  });
-
-  app.post('/api/lessons/:id/submit', (req, res) => {
-    const lesson = lessons.find((entry) => entry.id === req.params.id);
-    if (!lesson) {
-      return res.status(404).json({ error: 'Lesson not found' });
-    }
-    lesson.status = 'submitted';
-    lesson.updatedAt = new Date().toISOString();
-    return res.json(lesson);
-  });
-
-  app.post('/api/lessons/:id/approve', (req, res) => {
-    const lesson = lessons.find((entry) => entry.id === req.params.id);
-    if (!lesson) {
-      return res.status(404).json({ error: 'Lesson not found' });
-    }
-    lesson.status = 'approved';
-    lesson.headteacherComment = req.body.comment || 'Approved.';
-    lesson.updatedAt = new Date().toISOString();
-    return res.json(lesson);
-  });
-
-  app.post('/api/lessons/:id/correction', (req, res) => {
-    const lesson = lessons.find((entry) => entry.id === req.params.id);
-    if (!lesson) {
-      return res.status(404).json({ error: 'Lesson not found' });
-    }
-    lesson.status = 'correction_requested';
-    lesson.headteacherComment = req.body.comment || 'Please revise this lesson note.';
-    lesson.updatedAt = new Date().toISOString();
-    return res.json(lesson);
-  });
-
-  app.get('/api/assignments', (_req, res) => {
-    res.json(assignments);
-  });
-
-  app.post('/api/assignments', (req, res) => {
-    const payload = req.body && typeof req.body === 'object' ? req.body : {};
-    const attachments = Array.isArray(payload.attachments)
-      ? payload.attachments
-      : (payload.attachments ? [payload.attachments] : []);
-
-    const newAssignment = {
-      id: `a${Date.now()}`,
-      createdAt: new Date().toISOString(),
-      ...payload,
-      attachments: attachments.map((item) => {
-        if (typeof item === 'string') {
-          return { name: item, type: 'application/octet-stream', size: item.length };
-        }
-
-        return {
-          name: item?.name || 'attachment',
-          type: item?.type || 'application/octet-stream',
-          size: item?.size || 0,
-        };
-      }),
-    };
-    assignments.push(newAssignment);
-    res.status(201).json(newAssignment);
-  });
-
-  app.get('/api/submissions', (_req, res) => {
-    res.json(submissions);
-  });
-
-  app.post('/api/submissions', (req, res) => {
-    const payload = req.body && typeof req.body === 'object' ? req.body : {};
-    const existing = submissions.find((entry) => entry.assignmentId === payload.assignmentId && entry.studentId === payload.studentId);
-    const attachments = Array.isArray(payload.attachments)
-      ? payload.attachments
-      : (payload.attachments ? [payload.attachments] : []);
-
-    if (existing) {
-      Object.assign(existing, payload, {
-        status: 'submitted',
-        submittedAt: new Date().toISOString(),
-        attachments: attachments.map((item) => {
-          if (typeof item === 'string') {
-            return { name: item, type: 'application/octet-stream', size: item.length };
-          }
-
-          return {
-            name: item?.name || 'attachment',
-            type: item?.type || 'application/octet-stream',
-            size: item?.size || 0,
-          };
-        }),
+    if (teacherId) {
+      const teacher = db.findUserById(teacherId);
+      if (!teacher || teacher.role !== 'teacher') {
+        return res.status(400).json({ error: 'Invalid teacher selected' });
+      }
+      updates.teacherId = teacher.id;
+      updates.teacherName = teacher.name;
+      notifyUsers(db, [teacher.id], {
+        title: 'Class assignment updated',
+        detail: `You have been assigned to teach ${targetClass.name}.`,
       });
-      return res.status(200).json(existing);
     }
 
-    const newSubmission = {
-      id: `s${Date.now()}`,
-      status: 'submitted',
-      submittedAt: new Date().toISOString(),
-      ...payload,
-      attachments: attachments.map((item) => {
-        if (typeof item === 'string') {
-          return { name: item, type: 'application/octet-stream', size: item.length };
-        }
+    if (Array.isArray(studentIds)) {
+      const validStudentIds = studentIds.filter((id) => {
+        const student = db.findUserById(id);
+        return student && student.role === 'student';
+      });
+      updates.students = validStudentIds;
+      const newlyAdded = validStudentIds.filter((id) => !targetClass.students.includes(id));
+      notifyUsers(db, newlyAdded, {
+        title: 'You have been added to a class',
+        detail: `You have been enrolled in ${targetClass.name}.`,
+      });
+    }
 
-        return {
-          name: item?.name || 'attachment',
-          type: item?.type || 'application/octet-stream',
-          size: item?.size || 0,
-        };
-      }),
-    };
-    submissions.push(newSubmission);
-    return res.status(201).json(newSubmission);
+    const updated = db.updateClass(req.params.id, updates);
+    return res.json(updated);
   });
 
-  app.patch('/api/submissions/:id/grade', (req, res) => {
-    const submission = submissions.find((entry) => entry.id === req.params.id);
+  app.post('/api/classes/join', auth, requireRole('student'), (_req, res) => {
+    return res.status(403).json({ error: 'Students are enrolled by the headteacher. Contact your school administrator.' });
+  });
+
+  app.get('/api/lessons', auth, (_req, res) => {
+    res.json(db.getLessons());
+  });
+
+  app.post('/api/lessons', auth, requireRole('teacher'), (req, res) => {
+    const newLesson = db.createLesson({
+      ...req.body,
+      teacherId: req.user.id,
+      teacherName: req.user.name,
+    });
+    return res.status(201).json(newLesson);
+  });
+
+  app.patch('/api/lessons/:id', auth, requireRole('teacher'), (req, res) => {
+    const lesson = db.getLessons().find((entry) => entry.id === req.params.id);
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+    if (lesson.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const updated = db.updateLesson(req.params.id, req.body);
+    return res.json(updated);
+  });
+
+  app.post('/api/lessons/:id/submit', auth, requireRole('teacher'), (req, res) => {
+    const lesson = db.getLessons().find((entry) => entry.id === req.params.id);
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+    if (lesson.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const updated = db.updateLesson(req.params.id, { status: 'submitted' });
+    notifyHeadteachers(db, {
+      title: 'Lesson note submitted for review',
+      detail: `${lesson.teacherName} submitted "${lesson.topic}" for approval.`,
+    });
+    return res.json(updated);
+  });
+
+  app.post('/api/lessons/:id/approve', auth, requireRole('headteacher'), (req, res) => {
+    const lesson = db.getLessons().find((entry) => entry.id === req.params.id);
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    const updated = db.updateLesson(req.params.id, {
+      status: 'approved',
+      headteacherComment: req.body.comment || 'Approved.',
+    });
+
+    notifyUsers(db, [lesson.teacherId], {
+      title: 'Lesson note approved',
+      detail: `Your lesson "${lesson.topic}" was approved.`,
+    });
+
+    notifyClassStudents(db, lesson.classId, {
+      title: 'New lesson available',
+      detail: `"${lesson.topic}" is now available in ${lesson.className}.`,
+    });
+
+    return res.json(updated);
+  });
+
+  app.post('/api/lessons/:id/correction', auth, requireRole('headteacher'), (req, res) => {
+    const lesson = db.getLessons().find((entry) => entry.id === req.params.id);
+    if (!lesson) {
+      return res.status(404).json({ error: 'Lesson not found' });
+    }
+
+    const updated = db.updateLesson(req.params.id, {
+      status: 'correction_requested',
+      headteacherComment: req.body.comment || 'Please revise this lesson note.',
+    });
+
+    notifyUsers(db, [lesson.teacherId], {
+      title: 'Lesson correction requested',
+      detail: `Your lesson "${lesson.topic}" needs revisions.`,
+    });
+
+    return res.json(updated);
+  });
+
+  app.get('/api/assignments', auth, (_req, res) => {
+    res.json(db.getAssignments());
+  });
+
+  app.post('/api/assignments', auth, requireRole('teacher'), (req, res) => {
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const attachments = mapAttachments(
+      Array.isArray(payload.attachments) ? payload.attachments : (payload.attachments ? [payload.attachments] : []),
+    );
+
+    const newAssignment = db.createAssignment({
+      ...payload,
+      teacherId: req.user.id,
+      teacherName: req.user.name,
+      attachments,
+    });
+
+    notifyClassStudents(db, newAssignment.classId, {
+      title: 'New assignment posted',
+      detail: `${newAssignment.title} was added to ${newAssignment.className}.`,
+    }, req.user.id);
+
+    return res.status(201).json(newAssignment);
+  });
+
+  app.get('/api/submissions', auth, (_req, res) => {
+    res.json(db.getSubmissions());
+  });
+
+  app.post('/api/submissions', auth, requireRole('student'), (req, res) => {
+    const payload = req.body && typeof req.body === 'object' ? req.body : {};
+    const attachments = mapAttachments(
+      Array.isArray(payload.attachments) ? payload.attachments : (payload.attachments ? [payload.attachments] : []),
+    );
+
+    const { submission, created, blocked } = db.upsertSubmission({
+      ...payload,
+      studentId: req.user.id,
+      studentName: req.user.name,
+      attachments,
+    });
+
+    if (blocked) {
+      return res.status(409).json({ error: 'This assignment has already been submitted and is awaiting review.' });
+    }
+
+    const assignment = db.getAssignments().find((entry) => entry.id === submission.assignmentId);
+    if (assignment) {
+      notifyUsers(db, [assignment.teacherId], {
+        title: 'New assignment submission',
+        detail: `${req.user.name} submitted work for "${assignment.title}".`,
+      });
+    }
+
+    return res.status(created ? 201 : 200).json(submission);
+  });
+
+  app.patch('/api/submissions/:id/grade', auth, requireRole('teacher'), (req, res) => {
+    const submission = db.getSubmissions().find((entry) => entry.id === req.params.id);
     if (!submission) {
       return res.status(404).json({ error: 'Submission not found' });
     }
-    submission.score = req.body.score;
-    submission.feedback = req.body.feedback;
-    submission.status = 'graded';
-    return res.json(submission);
+
+    const assignment = db.getAssignments().find((entry) => entry.id === submission.assignmentId);
+    if (!assignment || assignment.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const graded = db.gradeSubmission(req.params.id, req.body.score, req.body.feedback);
+    notifyUsers(db, [submission.studentId], {
+      title: 'Assignment feedback ready',
+      detail: `Your submission for "${submission.assignmentTitle}" has been graded.`,
+    });
+    return res.json(graded);
   });
 
-  app.get('/api/questions', (_req, res) => {
-    res.json(questions);
+  app.post('/api/submissions/:id/return', auth, requireRole('teacher'), (req, res) => {
+    const submission = db.getSubmissions().find((entry) => entry.id === req.params.id);
+    if (!submission) {
+      return res.status(404).json({ error: 'Submission not found' });
+    }
+
+    const assignment = db.getAssignments().find((entry) => entry.id === submission.assignmentId);
+    if (!assignment || assignment.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    if (!req.body.feedback?.trim()) {
+      return res.status(400).json({ error: 'Feedback is required when returning work' });
+    }
+
+    const returned = db.returnSubmission(req.params.id, req.body.feedback.trim());
+    notifyUsers(db, [submission.studentId], {
+      title: 'Assignment returned for revision',
+      detail: `Your submission for "${submission.assignmentTitle}" needs to be redone.`,
+    });
+    return res.json(returned);
   });
 
-  app.post('/api/questions', (req, res) => {
-    const newQuestion = {
-      id: `q${Date.now()}`,
-      replies: [],
-      createdAt: new Date().toISOString(),
+  app.get('/api/questions', auth, (_req, res) => {
+    res.json(db.getQuestions());
+  });
+
+  app.post('/api/questions', auth, requireRole('student'), (req, res) => {
+    const newQuestion = db.createQuestion({
       ...req.body,
-    };
-    questions.push(newQuestion);
-    res.status(201).json(newQuestion);
+      studentId: req.user.id,
+      studentName: req.user.name,
+    });
+
+    const lesson = db.getLessons().find((entry) => entry.id === newQuestion.lessonId);
+    if (lesson) {
+      notifyUsers(db, [lesson.teacherId], {
+        title: 'New student question',
+        detail: `${req.user.name} asked a question about "${lesson.topic}".`,
+      });
+    }
+
+    return res.status(201).json(newQuestion);
   });
 
-  app.post('/api/questions/:id/replies', (req, res) => {
-    const question = questions.find((entry) => entry.id === req.params.id);
+  app.post('/api/questions/:id/replies', auth, requireRole('teacher'), (req, res) => {
+    const question = db.getQuestions().find((entry) => entry.id === req.params.id);
     if (!question) {
       return res.status(404).json({ error: 'Question not found' });
     }
-    const newReply = {
-      id: `r${Date.now()}`,
-      createdAt: new Date().toISOString(),
+
+    const lesson = db.getLessons().find((entry) => entry.id === question.lessonId);
+    if (!lesson || lesson.teacherId !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    const updated = db.addReply(req.params.id, {
       ...req.body,
-    };
-    question.replies.push(newReply);
-    return res.json(question);
+      userId: req.user.id,
+      userName: req.user.name,
+      userRole: req.user.role,
+    });
+
+    notifyUsers(db, [question.studentId], {
+      title: 'Teacher replied to your question',
+      detail: `You received a reply about "${question.lessonTopic}".`,
+    });
+
+    return res.json(updated);
   });
 
-  app.get('/api/activities', (_req, res) => {
-    res.json(activities);
+  app.get('/api/activities', auth, (_req, res) => {
+    res.json(db.getActivities());
   });
 
-  app.post('/api/activities', (req, res) => {
-    const newActivity = {
-      id: `act${Date.now()}`,
-      timestamp: new Date().toISOString(),
+  app.post('/api/activities', auth, (req, res) => {
+    const newActivity = db.addActivity({
       ...req.body,
-    };
-    activities.unshift(newActivity);
-    res.status(201).json(newActivity);
+      userId: req.user.id,
+      userName: req.user.name,
+      userRole: req.user.role,
+    });
+    return res.status(201).json(newActivity);
   });
 
-  app.get('/api/stats/teacher/:teacherId', (req, res) => {
+  app.get('/api/stats/teacher/:teacherId', auth, (req, res) => {
+    if (req.user.role !== 'headteacher' && req.user.id !== req.params.teacherId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
     const teacherId = req.params.teacherId;
-    const teacherClasses = classes.filter((entry) => entry.teacherId === teacherId);
-    const teacherLessons = lessons.filter((entry) => entry.teacherId === teacherId);
-    const teacherAssignments = assignments.filter((entry) => entry.teacherId === teacherId);
+    const classes = db.getClasses().filter((entry) => entry.teacherId === teacherId);
+    const lessons = db.getLessons().filter((entry) => entry.teacherId === teacherId);
+    const assignments = db.getAssignments().filter((entry) => entry.teacherId === teacherId);
+    const submissions = db.getSubmissions();
+
     res.json({
-      totalClasses: teacherClasses.length,
-      pendingLessons: teacherLessons.filter((entry) => entry.status === 'draft' || entry.status === 'correction_requested').length,
-      approvedLessons: teacherLessons.filter((entry) => entry.status === 'approved').length,
-      totalAssignments: teacherAssignments.length,
-      totalSubmissions: submissions.filter((entry) => teacherAssignments.some((assignment) => assignment.id === entry.assignmentId)).length,
+      totalClasses: classes.length,
+      pendingLessons: lessons.filter((entry) => entry.status === 'draft' || entry.status === 'correction_requested').length,
+      approvedLessons: lessons.filter((entry) => entry.status === 'approved').length,
+      totalAssignments: assignments.length,
+      totalSubmissions: submissions.filter((entry) => assignments.some((assignment) => assignment.id === entry.assignmentId)).length,
     });
   });
 
-  app.get('/api/stats/headteacher', (_req, res) => {
+  app.get('/api/stats/headteacher', auth, requireRole('headteacher'), (_req, res) => {
+    const lessons = db.getLessons();
+    const classes = db.getClasses();
     res.json({
       pendingReviews: lessons.filter((entry) => entry.status === 'submitted').length,
       approvedLessons: lessons.filter((entry) => entry.status === 'approved').length,
@@ -533,37 +658,42 @@ export function createApp() {
     });
   });
 
-  app.get('/api/stats/student/:studentId', (req, res) => {
+  app.get('/api/stats/student/:studentId', auth, (req, res) => {
+    if (req.user.role !== 'headteacher' && req.user.id !== req.params.studentId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
     const studentId = req.params.studentId;
-    const studentClasses = classes.filter((entry) => entry.students.includes(studentId));
+    const studentClasses = db.getClasses().filter((entry) => entry.students.includes(studentId));
     const classIds = studentClasses.map((entry) => entry.id);
-    const availableLessons = lessons.filter((entry) => classIds.includes(entry.classId) && entry.status === 'approved');
-    const studentAssignments = assignments.filter((entry) => classIds.includes(entry.classId));
-    const studentSubmissions = submissions.filter((entry) => entry.studentId === studentId);
+    const lessons = db.getLessons();
+    const assignments = db.getAssignments();
+    const submissions = db.getSubmissions().filter((entry) => entry.studentId === studentId);
+
     res.json({
       joinedClasses: studentClasses.length,
-      availableLessons: availableLessons.length,
-      pendingAssignments: studentAssignments.length - studentSubmissions.filter((entry) => entry.status === 'submitted' || entry.status === 'graded').length,
-      submittedWork: studentSubmissions.filter((entry) => entry.status === 'submitted' || entry.status === 'graded').length,
-      feedbackReceived: studentSubmissions.filter((entry) => entry.status === 'graded').length,
+      availableLessons: lessons.filter((entry) => classIds.includes(entry.classId) && entry.status === 'approved').length,
+      pendingAssignments: assignments.filter((entry) => classIds.includes(entry.classId)).length
+        - submissions.filter((entry) => (entry.status === 'submitted' || entry.status === 'graded')).length,
+      submittedWork: submissions.filter((entry) => entry.status === 'submitted' || entry.status === 'graded').length,
+      feedbackReceived: submissions.filter((entry) => entry.status === 'graded').length,
     });
   });
 
-  // Serve the built React frontend (must come AFTER all /api routes, before return app)
   app.use(express.static(path.join(__dirname, 'dist')));
   app.get('/*splat', (req, res) => {
     if (req.path.startsWith('/api')) {
       return res.status(404).json({ error: 'Not found' });
     }
-    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+    return res.sendFile(path.join(__dirname, 'dist', 'index.html'));
   });
 
-  return app;
+  return { app, db };
 }
 
 export function startServer(port = process.env.PORT || 4000) {
-  const app = createApp();
-  return app.listen(port, "0.0.0.0", () => {
+  const { app } = createApp();
+  return app.listen(port, '0.0.0.0', () => {
     console.log(`Classbridge API listening on port ${port}`);
   });
 }

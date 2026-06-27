@@ -4,6 +4,7 @@ import {
   GraduationCap, Settings, LogOut, Users, CheckSquare, PlusCircle
 } from 'lucide-react';
 import { useApp } from '@/contexts/AppContext';
+import { authApi } from '@/services/api';
 import type { UserRole } from '@/types';
 
 interface NavItem {
@@ -22,16 +23,17 @@ const navItems: Record<UserRole, NavItem[]> = {
   ],
   headteacher: [
     { label: 'Dashboard', path: '/headteacher', icon: <LayoutDashboard className="h-5 w-5" /> },
-    { label: 'Review Lessons', path: '/headteacher/review', icon: <CheckSquare className="h-5 w-5" /> },
+    { label: 'Manage Users', path: '/headteacher/users', icon: <Users className="h-5 w-5" /> },
+    { label: 'Assign Classes', path: '/headteacher/assign-class', icon: <PlusCircle className="h-5 w-5" /> },
     { label: 'All Classes', path: '/headteacher/classes', icon: <BookOpen className="h-5 w-5" /> },
-    { label: 'Teachers', path: '/headteacher/teachers', icon: <Users className="h-5 w-5" /> },
+    { label: 'Review Lessons', path: '/headteacher/review', icon: <CheckSquare className="h-5 w-5" /> },
+    { label: 'Teachers', path: '/headteacher/teachers', icon: <GraduationCap className="h-5 w-5" /> },
   ],
   student: [
     { label: 'Dashboard', path: '/student', icon: <LayoutDashboard className="h-5 w-5" /> },
     { label: 'My Classes', path: '/student/classes', icon: <BookOpen className="h-5 w-5" /> },
     { label: 'Lessons', path: '/student/lessons', icon: <FileText className="h-5 w-5" /> },
     { label: 'Assignments', path: '/student/assignments', icon: <ClipboardList className="h-5 w-5" /> },
-    { label: 'Join Class', path: '/student/join', icon: <PlusCircle className="h-5 w-5" /> },
   ],
 };
 
@@ -46,6 +48,7 @@ export default function DesktopSidebar() {
   const items = navItems[user.role];
 
   const handleLogout = () => {
+    authApi.logout();
     dispatch({ type: 'LOGOUT' });
     navigate('/');
   };

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Star, Send, FileText, UserCircle } from 'lucide-react';
+import { Star, Send, FileText, UserCircle, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -19,6 +19,7 @@ export default function SubmissionGrader({ submission, totalMarks, onSuccess }: 
   const [score, setScore] = useState(submission.score?.toString() || '');
   const [feedback, setFeedback] = useState(submission.feedback || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isReturning, setIsReturning] = useState(false);
 
   const handleGrade = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,9 +55,36 @@ export default function SubmissionGrader({ submission, totalMarks, onSuccess }: 
     }
   };
 
+  const handleReturn = async () => {
+    if (!feedback.trim()) {
+      toast.error('Please provide feedback explaining what needs to be redone');
+      return;
+    }
+
+    setIsReturning(true);
+    try {
+      const updated = await submissionsApi.returnForRevision(submission.id, feedback.trim());
+      if (updated) {
+        dispatch({ type: 'UPDATE_SUBMISSION', payload: updated });
+        await activitiesApi.add({
+          userId: state.currentUser!.id,
+          userName: state.currentUser!.name,
+          userRole: state.currentUser!.role,
+          action: 'returned submission',
+          target: `${submission.studentName} - ${submission.assignmentTitle}`,
+        });
+        toast.success('Submission returned to student for revision');
+        onSuccess?.();
+      }
+    } catch {
+      toast.error('Failed to return submission');
+    } finally {
+      setIsReturning(false);
+    }
+  };
+
   return (
     <div className="space-y-4">
-      {/* Student Answer */}
       <div className="bg-muted/50 rounded-lg p-4">
         <div className="flex items-center gap-2 mb-3">
           <UserCircle className="h-5 w-5 text-emerald-600" />
@@ -65,7 +93,6 @@ export default function SubmissionGrader({ submission, totalMarks, onSuccess }: 
         <p className="text-sm whitespace-pre-wrap">{submission.answer}</p>
       </div>
 
-      {/* Grade Form */}
       <form onSubmit={handleGrade} className="space-y-4 border-t pt-4">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -91,22 +118,38 @@ export default function SubmissionGrader({ submission, totalMarks, onSuccess }: 
           <Textarea
             value={feedback}
             onChange={(e) => setFeedback(e.target.value)}
-            placeholder="Provide constructive feedback..."
+            placeholder="Provide constructive feedback or explain what needs to be redone..."
             className="min-h-[100px]"
           />
         </div>
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="w-full h-11 bg-emerald-700 hover:bg-emerald-800 text-white"
-        >
-          {isSubmitting ? 'Saving...' : (
-            <>
-              <Send className="h-4 w-4 mr-2" />
-              Submit Grade & Feedback
-            </>
-          )}
-        </Button>
+        <div className="grid sm:grid-cols-2 gap-3">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isReturning || isSubmitting}
+            onClick={handleReturn}
+            className="h-11 border-amber-300 text-amber-800 hover:bg-amber-50"
+          >
+            {isReturning ? 'Returning...' : (
+              <>
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Send Back to Redo
+              </>
+            )}
+          </Button>
+          <Button
+            type="submit"
+            disabled={isSubmitting || isReturning}
+            className="h-11 bg-emerald-700 hover:bg-emerald-800 text-white"
+          >
+            {isSubmitting ? 'Saving...' : (
+              <>
+                <Send className="h-4 w-4 mr-2" />
+                Submit Grade
+              </>
+            )}
+          </Button>
+        </div>
       </form>
     </div>
   );

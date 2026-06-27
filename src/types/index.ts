@@ -9,7 +9,7 @@ export interface User {
 }
 
 export type LessonStatus = 'draft' | 'submitted' | 'approved' | 'correction_requested';
-export type SubmissionStatus = 'pending' | 'submitted' | 'graded';
+export type SubmissionStatus = 'pending' | 'submitted' | 'graded' | 'returned';
 
 export interface Class {
   id: string;
@@ -121,6 +121,45 @@ export interface Activity {
   action: string;
   target: string;
   timestamp: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  detail: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface TeacherSummary extends User {
+  lessonCount: number;
+  approvedLessonCount: number;
+}
+
+export interface AuthResponse {
+  user: User;
+  token: string;
+}
+
+export interface SetupStatus {
+  needsHeadteacherSetup: boolean;
+}
+
+export interface CreateUserPayload {
+  name: string;
+  email: string;
+  password: string;
+  role: 'teacher' | 'student';
+}
+
+export interface CreateClassPayload {
+  name: string;
+  subject: string;
+  level: string;
+  term: string;
+  teacherId: string;
+  studentIds?: string[];
 }
 
 export interface OfflineDraft {

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, BookOpen, PlusCircle } from 'lucide-react';
+import { ArrowLeft, BookOpen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import ClassCard from '@/components/class/ClassCard';
 import { classesApi } from '@/services/api';
@@ -43,15 +43,10 @@ export default function ClassesPage() {
           <div>
             <h1 className="text-lg font-semibold">{isTeacher ? 'My Classes' : 'My Classes'}</h1>
             <p className="text-sm text-muted-foreground">
-              {isTeacher ? 'Classes you teach' : 'Classes you have joined'}
+              {isTeacher ? 'Classes assigned to you by the headteacher' : 'Classes you have been enrolled in'}
             </p>
           </div>
         </div>
-        {isTeacher && (
-          <Button className="bg-emerald-700 hover:bg-emerald-800 text-white" onClick={() => navigate('/teacher/class/new')}>
-            <PlusCircle className="h-4 w-4 mr-1" /> Create
-          </Button>
-        )}
       </div>
 
       {classes.length === 0 ? (
@@ -59,13 +54,8 @@ export default function ClassesPage() {
           <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
           <p className="font-medium">No classes yet</p>
           <p className="text-sm text-muted-foreground">
-            {isTeacher ? 'Create your first class to get started.' : 'Join a class using a class code.'}
+            {isTeacher ? 'Your headteacher will assign classes to you.' : 'Your headteacher will enroll you in classes.'}
           </p>
-          {!isTeacher && (
-            <Button className="mt-4" onClick={() => navigate('/student/join')}>
-              Join Class
-            </Button>
-          )}
         </div>
       ) : (
         <div className="grid sm:grid-cols-2 gap-4">

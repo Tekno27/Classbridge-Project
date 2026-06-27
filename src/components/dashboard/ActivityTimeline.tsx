@@ -1,6 +1,6 @@
 import { formatDistanceToNow } from 'date-fns';
 import {
-  FileText, CheckCircle, Send, PlusCircle, UserPlus, Star, MessageCircle, BookOpen
+  FileText, CheckCircle, Send, PlusCircle, UserPlus, Star, MessageCircle, BookOpen, RotateCcw
 } from 'lucide-react';
 import type { Activity } from '@/types';
 
@@ -18,6 +18,7 @@ const actionIcons: Record<string, React.ReactNode> = {
   'created assignment': <BookOpen className="h-4 w-4" />,
   'submitted assignment': <Send className="h-4 w-4" />,
   'graded submission': <Star className="h-4 w-4" />,
+  'returned submission': <RotateCcw className="h-4 w-4" />,
   'asked question': <MessageCircle className="h-4 w-4" />,
 };
 
@@ -30,6 +31,7 @@ const actionColors: Record<string, string> = {
   'created assignment': 'bg-blue-100 text-blue-700',
   'submitted assignment': 'bg-cyan-100 text-cyan-700',
   'graded submission': 'bg-amber-100 text-amber-700',
+  'returned submission': 'bg-orange-100 text-orange-700',
   'asked question': 'bg-violet-100 text-violet-700',
 };
 

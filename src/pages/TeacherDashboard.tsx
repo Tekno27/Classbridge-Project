@@ -38,13 +38,6 @@ export default function TeacherDashboard() {
 
   const quickActions = [
     {
-      label: 'Create Class',
-      description: 'Set up a new class',
-      icon: BookOpen,
-      color: 'bg-emerald-100 text-emerald-700',
-      onClick: () => navigate('/teacher/class/new'),
-    },
-    {
       label: 'Lesson Note',
       description: 'Plan a new lesson',
       icon: FileText,
@@ -57,6 +50,13 @@ export default function TeacherDashboard() {
       icon: ClipboardList,
       color: 'bg-amber-100 text-amber-700',
       onClick: () => navigate('/teacher/assignments'),
+    },
+    {
+      label: 'Submissions',
+      description: 'Review student work',
+      icon: CheckSquare,
+      color: 'bg-emerald-100 text-emerald-700',
+      onClick: () => navigate('/teacher/submissions'),
     },
   ];
 

@@ -5,15 +5,36 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useApp } from '@/contexts/AppContext';
+import { usersApi } from '@/services/api';
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { state } = useApp();
+  const { state, dispatch } = useApp();
   const [name, setName] = useState(state.currentUser?.name ?? '');
   const [email, setEmail] = useState(state.currentUser?.email ?? '');
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSave = () => {
-    toast.success('Settings updated');
+  const handleSave = async () => {
+    if (!state.currentUser) return;
+    if (!name.trim() || !email.trim()) {
+      toast.error('Name and email are required');
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updated = await usersApi.updateProfile(state.currentUser.id, {
+        name: name.trim(),
+        email: email.trim(),
+      });
+      dispatch({ type: 'UPDATE_USER', payload: updated });
+      toast.success('Settings updated');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to update settings';
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -49,8 +70,12 @@ export default function SettingsPage() {
               <label className="text-sm font-medium">Email address</label>
               <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@example.com" />
             </div>
-            <Button onClick={handleSave} className="bg-emerald-700 hover:bg-emerald-800 text-white">
-              <Save className="mr-2 h-4 w-4" /> Save changes
+            <Button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="bg-emerald-700 hover:bg-emerald-800 text-white"
+            >
+              <Save className="mr-2 h-4 w-4" /> {isSaving ? 'Saving...' : 'Save changes'}
             </Button>
           </div>
         </div>
@@ -70,7 +95,7 @@ export default function SettingsPage() {
               <ShieldCheck className="h-4 w-4" />
               <p className="font-semibold">Security</p>
             </div>
-            <p className="text-sm text-muted-foreground">Your account is protected with secure local session access.</p>
+            <p className="text-sm text-muted-foreground">Your account is protected with secure authentication and encrypted passwords.</p>
           </div>
         </div>
       </div>

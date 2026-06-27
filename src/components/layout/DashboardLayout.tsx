@@ -16,6 +16,8 @@ function getPageTitle(pathname: string): string {
   if (pathname === '/headteacher/review') return 'Review Lesson Notes';
   if (pathname === '/headteacher/classes') return 'All Classes';
   if (pathname === '/headteacher/teachers') return 'Teachers';
+  if (pathname === '/headteacher/users') return 'Manage Users';
+  if (pathname === '/headteacher/assign-class') return 'Assign Class';
   if (pathname === '/student') return 'Student Dashboard';
   if (pathname === '/student/classes') return 'My Classes';
   if (pathname === '/student/lessons') return 'Available Lessons';

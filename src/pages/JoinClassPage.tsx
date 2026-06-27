@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router';
-import { ArrowLeft, PlusCircle, BookOpen } from 'lucide-react';
+import { ArrowLeft, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import JoinClassForm from '@/components/class/JoinClassForm';
 
@@ -24,17 +24,6 @@ export default function JoinClassPage() {
         </div>
 
         <JoinClassForm onSuccess={() => navigate('/student/classes')} />
-      </div>
-
-      {/* Demo hint */}
-      <div className="bg-sky-50 rounded-xl border border-sky-200 p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <BookOpen className="h-4 w-4 text-sky-700" />
-          <span className="font-medium text-sm text-sky-800">Demo Tip</span>
-        </div>
-        <p className="text-sm text-sky-700">
-          Try joining with this code: <strong className="font-mono">JHS2-SCI-4821</strong>
-        </p>
       </div>
     </div>
   );

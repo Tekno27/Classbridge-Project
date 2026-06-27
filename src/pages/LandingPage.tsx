@@ -54,13 +54,13 @@ export default function LandingPage() {
       icon: <GraduationCap className="h-8 w-8" />,
       role: 'Students',
       color: 'bg-sky-50 text-sky-700',
-      actions: ['Join classes with a code', 'View approved lessons', 'Submit assignments', 'Ask & discuss questions'],
+      actions: ['Join classes assigned by the headteacher', 'View approved lessons', 'Submit assignments', 'Ask & discuss questions'],
     },
     {
       icon: <Shield className="h-8 w-8" />,
       role: 'Headteachers',
       color: 'bg-amber-50 text-amber-700',
-      actions: ['Review lesson notes', 'Approve or request corrections', 'Monitor school activity', 'Ensure teaching quality'],
+      actions: ['Create teacher and student accounts', 'Assign teachers and students to classes', 'Review lesson notes', 'Monitor school activity'],
     },
   ];
 
@@ -78,7 +78,6 @@ export default function LandingPage() {
           <div className="hidden md:flex items-center gap-6">
             <a href="#features" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Features</a>
             <a href="#roles" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">For Schools</a>
-            <a href="#demo" className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">Demo</a>
           </div>
           <div className="flex items-center gap-3">
             <Button
@@ -92,7 +91,7 @@ export default function LandingPage() {
               className="bg-emerald-700 hover:bg-emerald-800 text-white"
               onClick={() => navigate('/login')}
             >
-              Try Demo
+              Get Started
             </Button>
             <button
               className="md:hidden p-2"
@@ -106,7 +105,6 @@ export default function LandingPage() {
           <div className="md:hidden border-t border-border px-4 py-3 space-y-2">
             <a href="#features" className="block py-2 text-sm font-medium">Features</a>
             <a href="#roles" className="block py-2 text-sm font-medium">For Schools</a>
-            <a href="#demo" className="block py-2 text-sm font-medium">Demo</a>
           </div>
         )}
       </nav>
@@ -135,7 +133,7 @@ export default function LandingPage() {
                   className="bg-emerald-700 hover:bg-emerald-800 text-white h-12 px-6"
                   onClick={() => navigate('/login')}
                 >
-                  Try the Demo <ArrowRight className="ml-2 h-4 w-4" />
+                  Get Started <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
                 <Button
                   variant="outline"
@@ -305,13 +303,13 @@ export default function LandingPage() {
       </section>
 
       {/* CTA */}
-      <section id="demo" className="py-16 bg-gradient-to-br from-emerald-700 to-emerald-800">
+      <section id="get-started" className="py-16 bg-gradient-to-br from-emerald-700 to-emerald-800">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center text-white">
           <h2 className="text-2xl sm:text-3xl font-bold mb-4">
             Ready to Bridge Your Classroom?
           </h2>
           <p className="text-emerald-100 mb-8">
-            Experience the full demo with pre-configured accounts for teachers, students, and headteachers.
+            Create your account and start managing lessons, assignments, and class workflows today.
           </p>
           <Button
             size="lg"
@@ -319,11 +317,8 @@ export default function LandingPage() {
             className="h-12 px-8 bg-white text-emerald-800 hover:bg-emerald-50"
             onClick={() => navigate('/login')}
           >
-            Start Demo <ArrowRight className="ml-2 h-4 w-4" />
+            Create Account <ArrowRight className="ml-2 h-4 w-4" />
           </Button>
-          <div className="mt-6 text-sm text-emerald-200">
-            Demo accounts: teacher@classbridge.test / student@classbridge.test / headteacher@classbridge.test
-          </div>
         </div>
       </section>
 

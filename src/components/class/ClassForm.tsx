@@ -38,7 +38,7 @@ export default function ClassForm({ onSuccess }: ClassFormProps) {
         level,
         term,
         teacherId: state.currentUser!.id,
-        teacherName: state.currentUser!.name,
+        studentIds: [],
       });
       dispatch({ type: 'ADD_CLASS', payload: newClass });
       await activitiesApi.add({

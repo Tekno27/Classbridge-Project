@@ -41,8 +41,14 @@ export default function StudentAssignmentsPage() {
     setSubmissions(subsMap);
   };
 
-  const pendingAssignments = assignments.filter((a) => !submissions[a.id] || submissions[a.id].status === 'pending');
-  const submittedAssignments = assignments.filter((a) => submissions[a.id] && (submissions[a.id].status === 'submitted' || submissions[a.id].status === 'graded'));
+  const pendingAssignments = assignments.filter((a) => {
+    const sub = submissions[a.id];
+    return !sub || sub.status === 'pending' || sub.status === 'returned';
+  });
+  const submittedAssignments = assignments.filter((a) => {
+    const sub = submissions[a.id];
+    return sub && (sub.status === 'submitted' || sub.status === 'graded');
+  });
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -74,22 +80,34 @@ export default function StudentAssignmentsPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {pendingAssignments.map((a) => (
+            {pendingAssignments.map((a) => {
+              const sub = submissions[a.id];
+              const isReturned = sub?.status === 'returned';
+              return (
               <button
                 key={a.id}
                 onClick={() => { setSelectedAssignment(a); setShowSubmit(true); }}
-                className="w-full text-left p-4 rounded-lg border hover:border-emerald-200 hover:bg-emerald-50/30 transition-all"
+                className={`w-full text-left p-4 rounded-lg border transition-all ${
+                  isReturned ? 'border-amber-300 bg-amber-50/40 hover:bg-amber-50/60' : 'hover:border-emerald-200 hover:bg-emerald-50/30'
+                }`}
               >
                 <div className="flex items-center justify-between">
                   <span className="font-medium">{a.title}</span>
-                  <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Due {new Date(a.dueDate).toLocaleDateString()}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full ${
+                    isReturned ? 'bg-amber-100 text-amber-700' : 'bg-amber-100 text-amber-700'
+                  }`}>
+                    {isReturned ? 'Needs Redo' : `Due ${new Date(a.dueDate).toLocaleDateString()}`}
+                  </span>
                 </div>
                 <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{a.description}</p>
+                {isReturned && sub?.feedback && (
+                  <p className="text-xs text-amber-800 mt-2 italic">Teacher feedback: &quot;{sub.feedback}&quot;</p>
+                )}
                 <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
                   <Star className="h-3.5 w-3.5" /> {a.totalMarks} marks
                 </div>
               </button>
-            ))}
+            );})}
           </div>
         )}
       </div>

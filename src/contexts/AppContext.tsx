@@ -1,5 +1,6 @@
 import { createContext, useContext, useReducer, useEffect, type ReactNode } from 'react';
 import type { User, Class, LessonNote, Assignment, Submission, Question, Activity } from '@/types';
+import { authApi, getAuthToken, setAuthToken } from '@/services/api';
 
 interface AppState {
   currentUser: User | null;
@@ -11,12 +12,15 @@ interface AppState {
   questions: Question[];
   activities: Activity[];
   isLoading: boolean;
+  authChecked: boolean;
 }
 
 type AppAction =
   | { type: 'LOGIN'; payload: User }
   | { type: 'LOGOUT' }
+  | { type: 'UPDATE_USER'; payload: User }
   | { type: 'SET_LOADING'; payload: boolean }
+  | { type: 'SET_AUTH_CHECKED'; payload: boolean }
   | { type: 'SET_CLASSES'; payload: Class[] }
   | { type: 'ADD_CLASS'; payload: Class }
   | { type: 'SET_LESSONS'; payload: LessonNote[] }
@@ -42,16 +46,21 @@ const initialState: AppState = {
   questions: [],
   activities: [],
   isLoading: false,
+  authChecked: false,
 };
 
 function appReducer(state: AppState, action: AppAction): AppState {
   switch (action.type) {
     case 'LOGIN':
-      return { ...state, currentUser: action.payload, isAuthenticated: true };
+      return { ...state, currentUser: action.payload, isAuthenticated: true, authChecked: true };
     case 'LOGOUT':
-      return { ...initialState };
+      return { ...initialState, authChecked: true };
+    case 'UPDATE_USER':
+      return { ...state, currentUser: action.payload };
     case 'SET_LOADING':
       return { ...state, isLoading: action.payload };
+    case 'SET_AUTH_CHECKED':
+      return { ...state, authChecked: action.payload };
     case 'SET_CLASSES':
       return { ...state, classes: action.payload };
     case 'ADD_CLASS':
@@ -103,10 +112,10 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(appReducer, initialState, (initializer) => {
-    // Load auth state from localStorage
     if (typeof window !== 'undefined') {
       const savedUser = localStorage.getItem('cb_user');
-      if (savedUser) {
+      const token = getAuthToken();
+      if (savedUser && token) {
         try {
           const user = JSON.parse(savedUser) as User;
           return { ...initializer, currentUser: user, isAuthenticated: true };
@@ -118,14 +127,36 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return initializer;
   });
 
-  // Persist auth to localStorage
+  useEffect(() => {
+    const validateSession = async () => {
+      const token = getAuthToken();
+      if (!token) {
+        dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
+        return;
+      }
+
+      const user = await authApi.getMe();
+      if (user) {
+        dispatch({ type: 'LOGIN', payload: user });
+        localStorage.setItem('cb_user', JSON.stringify(user));
+      } else {
+        setAuthToken(null);
+        localStorage.removeItem('cb_user');
+        dispatch({ type: 'LOGOUT' });
+      }
+      dispatch({ type: 'SET_AUTH_CHECKED', payload: true });
+    };
+
+    validateSession();
+  }, []);
+
   useEffect(() => {
     if (state.currentUser) {
       localStorage.setItem('cb_user', JSON.stringify(state.currentUser));
-    } else {
+    } else if (state.authChecked) {
       localStorage.removeItem('cb_user');
     }
-  }, [state.currentUser]);
+  }, [state.currentUser, state.authChecked]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>

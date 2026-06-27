@@ -8,7 +8,6 @@ import LoginPage from '@/pages/LoginPage';
 import TeacherDashboard from '@/pages/TeacherDashboard';
 import StudentDashboard from '@/pages/StudentDashboard';
 import HeadteacherDashboard from '@/pages/HeadteacherDashboard';
-import CreateClassPage from '@/pages/CreateClassPage';
 import LessonCreatorPage from '@/pages/LessonCreatorPage';
 import LessonReviewPage from '@/pages/LessonReviewPage';
 import ClassesPage from '@/pages/ClassesPage';
@@ -18,14 +17,23 @@ import StudentAssignmentsPage from '@/pages/StudentAssignmentsPage';
 import SubmissionsPage from '@/pages/SubmissionsPage';
 import HeadteacherClassesPage from '@/pages/HeadteacherClassesPage';
 import HeadteacherTeachersPage from '@/pages/HeadteacherTeachersPage';
+import HeadteacherManageUsersPage from '@/pages/HeadteacherManageUsersPage';
+import HeadteacherAssignClassPage from '@/pages/HeadteacherAssignClassPage';
 import LessonsPage from '@/pages/LessonsPage';
-import JoinClassPage from '@/pages/JoinClassPage';
 import DiscussionPage from '@/pages/DiscussionPage';
 import NotificationsPage from '@/pages/NotificationsPage';
 import SettingsPage from '@/pages/SettingsPage';
 
 function RequireAuth({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
   const { state } = useApp();
+
+  if (!state.authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
 
   if (!state.isAuthenticated || !state.currentUser) {
     return <Navigate to="/login" replace />;
@@ -45,6 +53,14 @@ function RequireAuth({ children, allowedRoles }: { children: React.ReactNode; al
 
 function RedirectAuthenticated() {
   const { state } = useApp();
+
+  if (!state.authChecked) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-muted-foreground">
+        Loading...
+      </div>
+    );
+  }
 
   if (state.isAuthenticated && state.currentUser) {
     const roleRoutes: Record<string, string> = {
@@ -91,7 +107,7 @@ function AppRoutes() {
           path="/teacher/class/new"
           element={
             <RequireAuth allowedRoles={['teacher']}>
-              <CreateClassPage />
+              <Navigate to="/teacher/classes" replace />
             </RequireAuth>
           }
         />
@@ -163,6 +179,22 @@ function AppRoutes() {
             </RequireAuth>
           }
         />
+        <Route
+          path="/headteacher/users"
+          element={
+            <RequireAuth allowedRoles={['headteacher']}>
+              <HeadteacherManageUsersPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/headteacher/assign-class"
+          element={
+            <RequireAuth allowedRoles={['headteacher']}>
+              <HeadteacherAssignClassPage />
+            </RequireAuth>
+          }
+        />
       </Route>
 
       {/* Student Routes */}
@@ -203,7 +235,7 @@ function AppRoutes() {
           path="/student/join"
           element={
             <RequireAuth allowedRoles={['student']}>
-              <JoinClassPage />
+              <Navigate to="/student/classes" replace />
             </RequireAuth>
           }
         />

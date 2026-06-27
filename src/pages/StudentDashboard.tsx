@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router';
 import {
-  BookOpen, FileText, ClipboardList, Star, ArrowRight, PlusCircle, MessageCircle
+  BookOpen, FileText, ClipboardList, Star, ArrowRight, MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import StatCard from '@/components/dashboard/StatCard';
@@ -62,18 +62,6 @@ export default function StudentDashboard() {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <button
-          onClick={() => navigate('/student/join')}
-          className="flex items-center gap-3 p-4 rounded-xl border bg-white hover:shadow-md hover:border-emerald-200 transition-all text-left"
-        >
-          <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-lg">
-            <PlusCircle className="h-5 w-5" />
-          </div>
-          <div>
-            <p className="font-semibold text-sm">Join Class</p>
-            <p className="text-xs text-muted-foreground">Enter a class code</p>
-          </div>
-        </button>
-        <button
           onClick={() => navigate('/student/assignments')}
           className="flex items-center gap-3 p-4 rounded-xl border bg-white hover:shadow-md hover:border-emerald-200 transition-all text-left"
         >
@@ -83,6 +71,18 @@ export default function StudentDashboard() {
           <div>
             <p className="font-semibold text-sm">My Assignments</p>
             <p className="text-xs text-muted-foreground">View and submit work</p>
+          </div>
+        </button>
+        <button
+          onClick={() => navigate('/student/lessons')}
+          className="flex items-center gap-3 p-4 rounded-xl border bg-white hover:shadow-md hover:border-emerald-200 transition-all text-left"
+        >
+          <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-lg">
+            <FileText className="h-5 w-5" />
+          </div>
+          <div>
+            <p className="font-semibold text-sm">My Lessons</p>
+            <p className="text-xs text-muted-foreground">View approved lesson notes</p>
           </div>
         </button>
       </div>
@@ -98,10 +98,7 @@ export default function StudentDashboard() {
           </div>
           {classes.length === 0 ? (
             <div className="text-center py-8">
-              <p className="text-sm text-muted-foreground mb-3">You haven&apos;t joined any classes yet.</p>
-              <Button size="sm" onClick={() => navigate('/student/join')}>
-                <PlusCircle className="h-4 w-4 mr-1" /> Join Class
-              </Button>
+              <p className="text-sm text-muted-foreground">You have not been assigned to any classes yet. Contact your headteacher.</p>
             </div>
           ) : (
             <div className="space-y-3">
