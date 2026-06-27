@@ -1,5 +1,9 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const users = [
   { id: 'u1', name: 'Mr. Kwame Asante', email: 'teacher@classbridge.test', role: 'teacher', avatar: '', password: 'password123' },
@@ -545,24 +549,21 @@ export function createApp() {
     });
   });
 
+  // Serve the built React frontend (must come AFTER all /api routes, before return app)
+  app.use(express.static(path.join(__dirname, 'dist')));
+  app.get('/*splat', (req, res) => {
+    if (req.path.startsWith('/api')) {
+      return res.status(404).json({ error: 'Not found' });
+    }
+    res.sendFile(path.join(__dirname, 'dist', 'index.html'));
+  });
+
   return app;
 }
 
-import path from 'path';
-import { fileURLToPath } from 'url';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
-
-// after all /api routes, before return app
-app.use(express.static(path.join(__dirname, 'dist')));
-app.get('*', (req, res) => {
-  if (req.path.startsWith('/api')) return res.status(404).json({ error: 'Not found' });
-  res.sendFile(path.join(__dirname, 'dist', 'index.html'));
-});
-
 export function startServer(port = process.env.PORT || 4000) {
   const app = createApp();
-  return app.listen(port, "0.0.0.0",() => {
+  return app.listen(port, "0.0.0.0", () => {
     console.log(`Classbridge API listening on port ${port}`);
   });
 }
