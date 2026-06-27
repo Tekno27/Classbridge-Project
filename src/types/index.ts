@@ -58,6 +58,12 @@ export interface TimeAllocation {
   minutes: number;
 }
 
+export interface AssignmentAttachment {
+  name: string;
+  type: string;
+  size: number;
+}
+
 export interface Assignment {
   id: string;
   classId: string;
@@ -69,6 +75,7 @@ export interface Assignment {
   totalMarks: number;
   dueDate: string;
   createdAt: string;
+  attachments?: AssignmentAttachment[];
 }
 
 export interface Submission {
@@ -83,6 +90,7 @@ export interface Submission {
   feedback?: string;
   status: SubmissionStatus;
   submittedAt: string;
+  attachments?: AssignmentAttachment[];
 }
 
 export interface Question {

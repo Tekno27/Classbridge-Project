@@ -37,12 +37,12 @@ export default function HeadteacherDashboard() {
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-        <StatCard title="Pending Review" value={stats.pendingReviews} icon={Clock} color="amber" trend="Needs your attention" />
-        <StatCard title="Approved" value={stats.approvedLessons} icon={CheckCircle} color="green" />
-        <StatCard title="Corrections" value={stats.correctionsRequested} icon={XCircle} color="rose" />
-        <StatCard title="Total Classes" value={stats.totalClasses} icon={BookOpen} color="blue" />
-        <StatCard title="Teachers" value={stats.totalTeachers} icon={Users} color="purple" />
-        <StatCard title="Students" value={stats.totalStudents} icon={Users} color="sky" />
+        <StatCard title="Pending Review" value={stats.pendingReviews} icon={Clock} color="amber" trend="Needs your attention" onClick={() => navigate('/headteacher/review')} />
+        <StatCard title="Approved" value={stats.approvedLessons} icon={CheckCircle} color="green" onClick={() => navigate('/headteacher/review')} />
+        <StatCard title="Corrections" value={stats.correctionsRequested} icon={XCircle} color="rose" onClick={() => navigate('/headteacher/review')} />
+        <StatCard title="Total Classes" value={stats.totalClasses} icon={BookOpen} color="blue" onClick={() => navigate('/headteacher/classes')} />
+        <StatCard title="Teachers" value={stats.totalTeachers} icon={Users} color="purple" onClick={() => navigate('/headteacher/teachers')} />
+        <StatCard title="Students" value={stats.totalStudents} icon={Users} color="sky" onClick={() => navigate('/headteacher/classes')} />
       </div>
 
       {/* Pending Reviews - Priority */}

@@ -6,6 +6,7 @@ interface StatCardProps {
   icon: LucideIcon;
   trend?: string;
   color: 'green' | 'blue' | 'amber' | 'rose' | 'sky' | 'purple';
+  onClick?: () => void;
 }
 
 const colorMap = {
@@ -26,9 +27,13 @@ const iconBgMap = {
   purple: 'bg-violet-100',
 };
 
-export default function StatCard({ title, value, icon: Icon, trend, color }: StatCardProps) {
+export default function StatCard({ title, value, icon: Icon, trend, color, onClick }: StatCardProps) {
   return (
-    <div className={`rounded-xl border p-4 sm:p-5 ${colorMap[color]}`}>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`w-full rounded-xl border p-4 sm:p-5 text-left transition-all hover:shadow-sm ${colorMap[color]} ${onClick ? 'cursor-pointer hover:-translate-y-0.5' : 'cursor-default'}`}
+    >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <p className="text-sm font-medium opacity-80">{title}</p>
@@ -41,6 +46,6 @@ export default function StatCard({ title, value, icon: Icon, trend, color }: Sta
           <Icon className="h-5 w-5" />
         </div>
       </div>
-    </div>
+    </button>
   );
 }

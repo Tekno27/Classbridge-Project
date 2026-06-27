@@ -20,6 +20,7 @@ export default function AssignmentForm({ classId, className, onSuccess }: Assign
   const [description, setDescription] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [totalMarks, setTotalMarks] = useState('20');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -40,6 +41,7 @@ export default function AssignmentForm({ classId, className, onSuccess }: Assign
         description: description.trim(),
         totalMarks: parseInt(totalMarks) || 20,
         dueDate,
+        attachments: selectedFiles,
       });
       dispatch({ type: 'ADD_ASSIGNMENT', payload: assignment });
       await activitiesApi.add({
@@ -54,6 +56,7 @@ export default function AssignmentForm({ classId, className, onSuccess }: Assign
       setDescription('');
       setDueDate('');
       setTotalMarks('20');
+      setSelectedFiles([]);
       onSuccess?.();
     } catch {
       toast.error('Failed to create assignment');
@@ -85,6 +88,21 @@ export default function AssignmentForm({ classId, className, onSuccess }: Assign
           placeholder="Describe the assignment..."
           className="min-h-[100px]"
         />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Attachments (optional)</Label>
+        <Input
+          type="file"
+          multiple
+          onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+          className="h-11 pt-2"
+        />
+        {selectedFiles.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected: {selectedFiles.map((file) => file.name).join(', ')}
+          </p>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">

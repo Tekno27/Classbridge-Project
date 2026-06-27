@@ -52,11 +52,11 @@ export default function StudentDashboard() {
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        <StatCard title="Classes" value={stats.joinedClasses} icon={BookOpen} color="green" />
-        <StatCard title="Lessons" value={stats.availableLessons} icon={FileText} color="blue" />
-        <StatCard title="Pending" value={stats.pendingAssignments} icon={ClipboardList} color="amber" />
-        <StatCard title="Submitted" value={stats.submittedWork} icon={FileText} color="sky" />
-        <StatCard title="Feedback" value={stats.feedbackReceived} icon={Star} color="purple" />
+        <StatCard title="Classes" value={stats.joinedClasses} icon={BookOpen} color="green" onClick={() => navigate('/student/classes')} />
+        <StatCard title="Lessons" value={stats.availableLessons} icon={FileText} color="blue" onClick={() => navigate('/student/lessons')} />
+        <StatCard title="Pending" value={stats.pendingAssignments} icon={ClipboardList} color="amber" onClick={() => navigate('/student/assignments')} />
+        <StatCard title="Submitted" value={stats.submittedWork} icon={FileText} color="sky" onClick={() => navigate('/student/assignments')} />
+        <StatCard title="Feedback" value={stats.feedbackReceived} icon={Star} color="purple" onClick={() => navigate('/notifications')} />
       </div>
 
       {/* Quick Actions */}

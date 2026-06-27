@@ -15,6 +15,7 @@ interface SubmissionFormProps {
 export default function SubmissionForm({ assignment, onSuccess }: SubmissionFormProps) {
   const { state, dispatch } = useApp();
   const [answer, setAnswer] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -33,6 +34,7 @@ export default function SubmissionForm({ assignment, onSuccess }: SubmissionForm
         studentName: state.currentUser!.name,
         classId: assignment.classId,
         answer: answer.trim(),
+        attachments: selectedFiles,
       });
       dispatch({ type: 'UPDATE_SUBMISSION', payload: submission });
       await activitiesApi.add({
@@ -44,6 +46,7 @@ export default function SubmissionForm({ assignment, onSuccess }: SubmissionForm
       });
       toast.success('Assignment submitted successfully!');
       setAnswer('');
+      setSelectedFiles([]);
       onSuccess?.();
     } catch {
       toast.error('Failed to submit assignment');
@@ -69,6 +72,21 @@ export default function SubmissionForm({ assignment, onSuccess }: SubmissionForm
         placeholder="Write your answer here..."
         className="min-h-[200px]"
       />
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium">Attachments (optional)</p>
+        <input
+          type="file"
+          multiple
+          onChange={(e) => setSelectedFiles(Array.from(e.target.files || []))}
+          className="block w-full text-sm text-muted-foreground file:mr-4 file:rounded-full file:border-0 file:bg-emerald-50 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-emerald-700 hover:file:bg-emerald-100"
+        />
+        {selectedFiles.length > 0 && (
+          <p className="text-sm text-muted-foreground">
+            {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected: {selectedFiles.map((file) => file.name).join(', ')}
+          </p>
+        )}
+      </div>
 
       <Button
         type="submit"

@@ -1,385 +1,299 @@
 import type {
   User, Class, LessonNote, Assignment, Submission, Question, Activity, Reply,
 } from '@/types';
-import {
-  mockUsers, mockClasses, mockLessons, mockAssignments, mockSubmissions,
-  mockQuestions, mockActivities,
-} from './mockData';
 
-// Simulated delay for realism
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const API_BASE = '/api';
 
-// In-memory storage (mutable for demo)
-let classes = [...mockClasses];
-let lessons = [...mockLessons];
-let assignments = [...mockAssignments];
-let submissions = [...mockSubmissions];
-let questions = [...mockQuestions];
-let activities = [...mockActivities];
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const headers = new Headers(init?.headers);
+  const isFormData = init?.body instanceof FormData;
+
+  if (!isFormData && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
+  const response = await fetch(`${API_BASE}${path}`, {
+    ...init,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Request failed: ${response.status}`);
+  }
+
+  return response.json() as Promise<T>;
+}
 
 // Auth API
 export const authApi = {
-  login: async (email: string, _password: string): Promise<User | null> => {
-    await delay(600);
-    const user = mockUsers.find((u) => u.email === email);
+  login: async (email: string, password: string): Promise<User | null> => {
+    const user = await request<User>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    });
+    return user || null;
+  },
+
+  register: async (data: { name: string; email: string; password: string; role: User['role'] }): Promise<User | null> => {
+    const user = await request<User>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
     return user || null;
   },
 
   getMe: async (userId: string): Promise<User | null> => {
-    await delay(300);
-    const user = mockUsers.find((u) => u.id === userId);
-    return user || null;
+    const users = await request<User[]>('/users');
+    return users.find((u) => u.id === userId) || null;
   },
 };
 
 // Classes API
 export const classesApi = {
   getAll: async (): Promise<Class[]> => {
-    await delay(400);
-    return [...classes];
+    const response = await request<Class[]>('/classes');
+    return [...response];
   },
 
   getByTeacher: async (teacherId: string): Promise<Class[]> => {
-    await delay(400);
-    return classes.filter((c) => c.teacherId === teacherId);
+    const response = await request<Class[]>('/classes');
+    return response.filter((c) => c.teacherId === teacherId);
   },
 
   getByStudent: async (studentId: string): Promise<Class[]> => {
-    await delay(400);
-    return classes.filter((c) => c.students.includes(studentId));
+    const response = await request<Class[]>('/classes');
+    return response.filter((c) => c.students.includes(studentId));
   },
 
   getById: async (id: string): Promise<Class | null> => {
-    await delay(300);
-    return classes.find((c) => c.id === id) || null;
+    const response = await request<Class[]>('/classes');
+    return response.find((c) => c.id === id) || null;
   },
 
   create: async (data: Omit<Class, 'id' | 'code' | 'students' | 'createdAt'>): Promise<Class> => {
-    await delay(600);
-    const newClass: Class = {
-      ...data,
-      id: `c${Date.now()}`,
-      code: generateClassCode(data.level, data.subject),
-      students: [],
-      createdAt: new Date().toISOString(),
-    };
-    classes = [...classes, newClass];
-    return newClass;
+    return request<Class>('/classes', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
   },
 
   join: async (code: string, studentId: string): Promise<Class | null> => {
-    await delay(500);
-    const classIndex = classes.findIndex((c) => c.code === code);
-    if (classIndex === -1) return null;
-    if (classes[classIndex].students.includes(studentId)) return null;
-    const updated = {
-      ...classes[classIndex],
-      students: [...classes[classIndex].students, studentId],
-    };
-    classes = classes.map((c, i) => (i === classIndex ? updated : c));
-    return updated;
+    return request<Class | null>(`/classes/join?code=${encodeURIComponent(code)}&studentId=${encodeURIComponent(studentId)}`, {
+      method: 'POST',
+    });
   },
 };
-
-function generateClassCode(level: string, subject: string): string {
-  const levelPrefix = level.replace(/\s/g, '').toUpperCase();
-  const subjPrefix = subject.split(' ').map((w) => w[0]).join('').toUpperCase();
-  const random = Math.floor(1000 + Math.random() * 9000);
-  return `${levelPrefix}-${subjPrefix}-${random}`;
-}
 
 // Lessons API
 export const lessonsApi = {
-  getAll: async (): Promise<LessonNote[]> => {
-    await delay(400);
-    return [...lessons];
-  },
+  getAll: async (): Promise<LessonNote[]> => request<LessonNote[]>('/lessons'),
 
   getByTeacher: async (teacherId: string): Promise<LessonNote[]> => {
-    await delay(400);
-    return lessons.filter((l) => l.teacherId === teacherId);
+    const lessonsList = await request<LessonNote[]>('/lessons');
+    return lessonsList.filter((l) => l.teacherId === teacherId);
   },
 
   getByClass: async (classId: string): Promise<LessonNote[]> => {
-    await delay(400);
-    return lessons.filter((l) => l.classId === classId && l.status === 'approved');
+    const lessonsList = await request<LessonNote[]>('/lessons');
+    return lessonsList.filter((l) => l.classId === classId && l.status === 'approved');
   },
 
   getById: async (id: string): Promise<LessonNote | null> => {
-    await delay(300);
-    return lessons.find((l) => l.id === id) || null;
+    const lessonsList = await request<LessonNote[]>('/lessons');
+    return lessonsList.find((l) => l.id === id) || null;
   },
 
   getPendingReview: async (): Promise<LessonNote[]> => {
-    await delay(400);
-    return lessons.filter((l) => l.status === 'submitted');
+    const lessonsList = await request<LessonNote[]>('/lessons');
+    return lessonsList.filter((l) => l.status === 'submitted');
   },
 
   getByStatus: async (status: string): Promise<LessonNote[]> => {
-    await delay(400);
-    return lessons.filter((l) => l.status === status);
+    const lessonsList = await request<LessonNote[]>('/lessons');
+    return lessonsList.filter((l) => l.status === status);
   },
 
-  create: async (data: Omit<LessonNote, 'id' | 'status' | 'createdAt' | 'updatedAt'>): Promise<LessonNote> => {
-    await delay(600);
-    const newLesson: LessonNote = {
-      ...data,
-      id: `l${Date.now()}`,
-      status: 'draft',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    lessons = [...lessons, newLesson];
-    return newLesson;
-  },
+  create: async (data: Omit<LessonNote, 'id' | 'status' | 'createdAt' | 'updatedAt'>): Promise<LessonNote> => request<LessonNote>('/lessons', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 
-  update: async (id: string, data: Partial<LessonNote>): Promise<LessonNote | null> => {
-    await delay(500);
-    const index = lessons.findIndex((l) => l.id === id);
-    if (index === -1) return null;
-    const updated = { ...lessons[index], ...data, updatedAt: new Date().toISOString() };
-    lessons = lessons.map((l, i) => (i === index ? updated : l));
-    return updated;
-  },
+  update: async (id: string, data: Partial<LessonNote>): Promise<LessonNote | null> => request<LessonNote>(`/lessons/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  }),
 
-  submit: async (id: string): Promise<LessonNote | null> => {
-    await delay(500);
-    const index = lessons.findIndex((l) => l.id === id);
-    if (index === -1) return null;
-    const updated = { ...lessons[index], status: 'submitted' as const, updatedAt: new Date().toISOString() };
-    lessons = lessons.map((l, i) => (i === index ? updated : l));
-    return updated;
-  },
+  submit: async (id: string): Promise<LessonNote | null> => request<LessonNote>(`/lessons/${id}/submit`, {
+    method: 'POST',
+  }),
 
-  approve: async (id: string, comment?: string): Promise<LessonNote | null> => {
-    await delay(500);
-    const index = lessons.findIndex((l) => l.id === id);
-    if (index === -1) return null;
-    const updated = {
-      ...lessons[index],
-      status: 'approved' as const,
-      headteacherComment: comment || 'Approved.',
-      updatedAt: new Date().toISOString(),
-    };
-    lessons = lessons.map((l, i) => (i === index ? updated : l));
-    return updated;
-  },
+  approve: async (id: string, comment?: string): Promise<LessonNote | null> => request<LessonNote>(`/lessons/${id}/approve`, {
+    method: 'POST',
+    body: JSON.stringify({ comment }),
+  }),
 
-  requestCorrection: async (id: string, comment: string): Promise<LessonNote | null> => {
-    await delay(500);
-    const index = lessons.findIndex((l) => l.id === id);
-    if (index === -1) return null;
-    const updated = {
-      ...lessons[index],
-      status: 'correction_requested' as const,
-      headteacherComment: comment,
-      updatedAt: new Date().toISOString(),
-    };
-    lessons = lessons.map((l, i) => (i === index ? updated : l));
-    return updated;
-  },
+  requestCorrection: async (id: string, comment: string): Promise<LessonNote | null> => request<LessonNote>(`/lessons/${id}/correction`, {
+    method: 'POST',
+    body: JSON.stringify({ comment }),
+  }),
 };
+
+type AssignmentCreatePayload = Omit<Assignment, 'id' | 'createdAt' | 'attachments'> & { attachments?: File[] };
+type SubmissionCreatePayload = Omit<Submission, 'id' | 'status' | 'submittedAt' | 'attachments'> & { attachments?: File[] };
 
 // Assignments API
 export const assignmentsApi = {
-  getAll: async (): Promise<Assignment[]> => {
-    await delay(400);
-    return [...assignments];
-  },
+  getAll: async (): Promise<Assignment[]> => request<Assignment[]>('/assignments'),
 
   getByTeacher: async (teacherId: string): Promise<Assignment[]> => {
-    await delay(400);
-    return assignments.filter((a) => a.teacherId === teacherId);
+    const assignmentsList = await request<Assignment[]>('/assignments');
+    return assignmentsList.filter((a) => a.teacherId === teacherId);
   },
 
   getByClass: async (classId: string): Promise<Assignment[]> => {
-    await delay(400);
-    return assignments.filter((a) => a.classId === classId);
+    const assignmentsList = await request<Assignment[]>('/assignments');
+    return assignmentsList.filter((a) => a.classId === classId);
   },
 
   getById: async (id: string): Promise<Assignment | null> => {
-    await delay(300);
-    return assignments.find((a) => a.id === id) || null;
+    const assignmentsList = await request<Assignment[]>('/assignments');
+    return assignmentsList.find((a) => a.id === id) || null;
   },
 
-  create: async (data: Omit<Assignment, 'id' | 'createdAt'>): Promise<Assignment> => {
-    await delay(600);
-    const newAssignment: Assignment = {
-      ...data,
-      id: `a${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    assignments = [...assignments, newAssignment];
-    return newAssignment;
+  create: async (data: AssignmentCreatePayload): Promise<Assignment> => {
+    const { attachments, ...payload } = data;
+
+    if (attachments?.length) {
+      const formData = new FormData();
+      const attachmentFiles = attachments as File[];
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== undefined) {
+          formData.append(key, String(value));
+        }
+      });
+      attachmentFiles.forEach((file) => formData.append('attachments', file));
+
+      return request<Assignment>('/assignments', {
+        method: 'POST',
+        body: formData,
+      });
+    }
+
+    return request<Assignment>('/assignments', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 };
 
 // Submissions API
 export const submissionsApi = {
-  getAll: async (): Promise<Submission[]> => {
-    await delay(400);
-    return [...submissions];
-  },
+  getAll: async (): Promise<Submission[]> => request<Submission[]>('/submissions'),
 
   getByStudent: async (studentId: string): Promise<Submission[]> => {
-    await delay(400);
-    return submissions.filter((s) => s.studentId === studentId);
+    const submissionsList = await request<Submission[]>('/submissions');
+    return submissionsList.filter((s) => s.studentId === studentId);
   },
 
   getByAssignment: async (assignmentId: string): Promise<Submission[]> => {
-    await delay(400);
-    return submissions.filter((s) => s.assignmentId === assignmentId);
+    const submissionsList = await request<Submission[]>('/submissions');
+    return submissionsList.filter((s) => s.assignmentId === assignmentId);
   },
 
   getByTeacher: async (teacherId: string): Promise<Submission[]> => {
-    await delay(400);
-    const teacherAssignments = assignments.filter((a) => a.teacherId === teacherId);
+    const assignmentsList = await request<Assignment[]>('/assignments');
+    const teacherAssignments = assignmentsList.filter((a) => a.teacherId === teacherId);
     const assignmentIds = teacherAssignments.map((a) => a.id);
-    return submissions.filter((s) => assignmentIds.includes(s.assignmentId));
+    const submissionsList = await request<Submission[]>('/submissions');
+    return submissionsList.filter((s) => assignmentIds.includes(s.assignmentId));
   },
 
-  submit: async (data: Omit<Submission, 'id' | 'status' | 'submittedAt'>): Promise<Submission> => {
-    await delay(600);
-    // Update existing or create new
-    const existingIndex = submissions.findIndex(
-      (s) => s.assignmentId === data.assignmentId && s.studentId === data.studentId
-    );
-    if (existingIndex >= 0) {
-      const updated = {
-        ...submissions[existingIndex],
-        answer: data.answer,
-        status: 'submitted' as const,
-        submittedAt: new Date().toISOString(),
-      };
-      submissions = submissions.map((s, i) => (i === existingIndex ? updated : s));
-      return updated;
+  submit: async (data: SubmissionCreatePayload): Promise<Submission> => {
+    const { attachments, ...payload } = data;
+
+    if (attachments?.length) {
+      const formData = new FormData();
+      const attachmentFiles = attachments as File[];
+      Object.entries(payload).forEach(([key, value]) => {
+        if (value !== undefined) {
+          formData.append(key, String(value));
+        }
+      });
+      attachmentFiles.forEach((file) => formData.append('attachments', file));
+
+      return request<Submission>('/submissions', {
+        method: 'POST',
+        body: formData,
+      });
     }
-    const newSubmission: Submission = {
-      ...data,
-      id: `s${Date.now()}`,
-      status: 'submitted',
-      submittedAt: new Date().toISOString(),
-    };
-    submissions = [...submissions, newSubmission];
-    return newSubmission;
+
+    return request<Submission>('/submissions', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
   },
 
-  grade: async (id: string, score: number, feedback: string): Promise<Submission | null> => {
-    await delay(500);
-    const index = submissions.findIndex((s) => s.id === id);
-    if (index === -1) return null;
-    const updated = {
-      ...submissions[index],
-      score,
-      feedback,
-      status: 'graded' as const,
-    };
-    submissions = submissions.map((s, i) => (i === index ? updated : s));
-    return updated;
-  },
+  grade: async (id: string, score: number, feedback: string): Promise<Submission | null> => request<Submission>(`/submissions/${id}/grade`, {
+    method: 'PATCH',
+    body: JSON.stringify({ score, feedback }),
+  }),
 };
 
 // Questions API
 export const questionsApi = {
   getByLesson: async (lessonId: string): Promise<Question[]> => {
-    await delay(400);
-    return questions.filter((q) => q.lessonId === lessonId);
+    const questionsList = await request<Question[]>('/questions');
+    return questionsList.filter((q) => q.lessonId === lessonId);
   },
 
-  ask: async (data: Omit<Question, 'id' | 'replies' | 'createdAt'>): Promise<Question> => {
-    await delay(500);
-    const newQuestion: Question = {
-      ...data,
-      id: `q${Date.now()}`,
-      replies: [],
-      createdAt: new Date().toISOString(),
-    };
-    questions = [...questions, newQuestion];
-    return newQuestion;
-  },
+  ask: async (data: Omit<Question, 'id' | 'replies' | 'createdAt'>): Promise<Question> => request<Question>('/questions', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 
-  reply: async (questionId: string, reply: Omit<Reply, 'id' | 'createdAt'>): Promise<Question | null> => {
-    await delay(500);
-    const index = questions.findIndex((q) => q.id === questionId);
-    if (index === -1) return null;
-    const newReply = {
-      ...reply,
-      id: `r${Date.now()}`,
-      createdAt: new Date().toISOString(),
-    };
-    const updated = {
-      ...questions[index],
-      replies: [...questions[index].replies, newReply],
-    };
-    questions = questions.map((q, i) => (i === index ? updated : q));
-    return updated;
-  },
+  reply: async (questionId: string, reply: Omit<Reply, 'id' | 'createdAt'>): Promise<Question | null> => request<Question>(`/questions/${questionId}/replies`, {
+    method: 'POST',
+    body: JSON.stringify(reply),
+  }),
 };
 
 // Activities API
 export const activitiesApi = {
   getAll: async (): Promise<Activity[]> => {
-    await delay(300);
-    return [...activities].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+    const activitiesList = await request<Activity[]>('/activities');
+    return [...activitiesList].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
   },
 
-  add: async (data: Omit<Activity, 'id' | 'timestamp'>): Promise<Activity> => {
-    await delay(300);
-    const newActivity: Activity = {
-      ...data,
-      id: `act${Date.now()}`,
-      timestamp: new Date().toISOString(),
-    };
-    activities = [newActivity, ...activities];
-    return newActivity;
-  },
+  add: async (data: Omit<Activity, 'id' | 'timestamp'>): Promise<Activity> => request<Activity>('/activities', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  }),
 };
 
 // Stats API
 export const statsApi = {
-  getTeacherStats: async (teacherId: string) => {
-    await delay(400);
-    const teacherClasses = classes.filter((c) => c.teacherId === teacherId);
-    const teacherLessons = lessons.filter((l) => l.teacherId === teacherId);
-    const teacherAssignments = assignments.filter((a) => a.teacherId === teacherId);
-    const assignmentIds = teacherAssignments.map((a) => a.id);
-    const teacherSubmissions = submissions.filter((s) => assignmentIds.includes(s.assignmentId));
+  getTeacherStats: async (teacherId: string) => request<{
+    totalClasses: number;
+    pendingLessons: number;
+    approvedLessons: number;
+    totalAssignments: number;
+    totalSubmissions: number;
+  }>(`/stats/teacher/${teacherId}`),
 
-    return {
-      totalClasses: teacherClasses.length,
-      pendingLessons: teacherLessons.filter((l) => l.status === 'draft' || l.status === 'correction_requested').length,
-      approvedLessons: teacherLessons.filter((l) => l.status === 'approved').length,
-      totalAssignments: teacherAssignments.length,
-      totalSubmissions: teacherSubmissions.filter((s) => s.status === 'submitted' || s.status === 'graded').length,
-    };
-  },
+  getHeadteacherStats: async () => request<{
+    pendingReviews: number;
+    approvedLessons: number;
+    correctionsRequested: number;
+    totalClasses: number;
+    totalTeachers: number;
+    totalStudents: number;
+  }>('/stats/headteacher'),
 
-  getHeadteacherStats: async () => {
-    await delay(400);
-    return {
-      pendingReviews: lessons.filter((l) => l.status === 'submitted').length,
-      approvedLessons: lessons.filter((l) => l.status === 'approved').length,
-      correctionsRequested: lessons.filter((l) => l.status === 'correction_requested').length,
-      totalClasses: classes.length,
-      totalTeachers: new Set(classes.map((c) => c.teacherId)).size,
-      totalStudents: new Set(classes.flatMap((c) => c.students)).size,
-    };
-  },
-
-  getStudentStats: async (studentId: string) => {
-    await delay(400);
-    const studentClasses = classes.filter((c) => c.students.includes(studentId));
-    const classIds = studentClasses.map((c) => c.id);
-    const availableLessons = lessons.filter((l) => classIds.includes(l.classId) && l.status === 'approved');
-    const studentAssignments = assignments.filter((a) => classIds.includes(a.classId));
-    const studentSubmissions = submissions.filter((s) => s.studentId === studentId);
-
-    return {
-      joinedClasses: studentClasses.length,
-      availableLessons: availableLessons.length,
-      pendingAssignments: studentAssignments.length - studentSubmissions.filter((s) => s.status === 'submitted' || s.status === 'graded').length,
-      submittedWork: studentSubmissions.filter((s) => s.status === 'submitted' || s.status === 'graded').length,
-      feedbackReceived: studentSubmissions.filter((s) => s.status === 'graded').length,
-    };
-  },
+  getStudentStats: async (studentId: string) => request<{
+    joinedClasses: number;
+    availableLessons: number;
+    pendingAssignments: number;
+    submittedWork: number;
+    feedbackReceived: number;
+  }>(`/stats/student/${studentId}`),
 };

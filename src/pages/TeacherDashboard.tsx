@@ -64,11 +64,11 @@ export default function TeacherDashboard() {
     <div className="space-y-6">
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-        <StatCard title="Classes" value={stats.totalClasses} icon={BookOpen} color="green" />
-        <StatCard title="Pending" value={stats.pendingLessons} icon={Clock} color="amber" />
-        <StatCard title="Approved" value={stats.approvedLessons} icon={CheckSquare} color="green" />
-        <StatCard title="Assignments" value={stats.totalAssignments} icon={ClipboardList} color="blue" />
-        <StatCard title="Submissions" value={stats.totalSubmissions} icon={FileText} color="sky" />
+        <StatCard title="Classes" value={stats.totalClasses} icon={BookOpen} color="green" onClick={() => navigate('/teacher/classes')} />
+        <StatCard title="Pending" value={stats.pendingLessons} icon={Clock} color="amber" onClick={() => navigate('/teacher/lessons')} />
+        <StatCard title="Approved" value={stats.approvedLessons} icon={CheckSquare} color="green" onClick={() => navigate('/teacher/lessons')} />
+        <StatCard title="Assignments" value={stats.totalAssignments} icon={ClipboardList} color="blue" onClick={() => navigate('/teacher/assignments')} />
+        <StatCard title="Submissions" value={stats.totalSubmissions} icon={FileText} color="sky" onClick={() => navigate('/teacher/submissions')} />
       </div>
 
       {/* Quick Actions */}

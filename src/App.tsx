@@ -21,6 +21,8 @@ import HeadteacherTeachersPage from '@/pages/HeadteacherTeachersPage';
 import LessonsPage from '@/pages/LessonsPage';
 import JoinClassPage from '@/pages/JoinClassPage';
 import DiscussionPage from '@/pages/DiscussionPage';
+import NotificationsPage from '@/pages/NotificationsPage';
+import SettingsPage from '@/pages/SettingsPage';
 
 function RequireAuth({ children, allowedRoles }: { children: React.ReactNode; allowedRoles?: string[] }) {
   const { state } = useApp();
@@ -207,13 +209,29 @@ function AppRoutes() {
         />
       </Route>
 
-      {/* Discussion (all roles) */}
+      {/* Shared routes */}
       <Route element={<DashboardLayout />}>
         <Route
           path="/discussion/:lessonId"
           element={
             <RequireAuth>
               <DiscussionPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/notifications"
+          element={
+            <RequireAuth>
+              <NotificationsPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/settings"
+          element={
+            <RequireAuth>
+              <SettingsPage />
             </RequireAuth>
           }
         />

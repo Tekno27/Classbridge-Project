@@ -83,7 +83,10 @@ export default function DesktopSidebar() {
       </nav>
 
       <div className="p-3 border-t border-border space-y-1">
-        <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+        <button
+          onClick={() => navigate('/settings')}
+          className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        >
           <Settings className="h-5 w-5" />
           Settings
         </button>
